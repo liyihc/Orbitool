@@ -1,17 +1,15 @@
-from dataclasses import asdict, dataclass
-import json
-import multiprocessing
 import os
 from pathlib import Path
 import shutil
 import subprocess
-from traceback import format_exception, print_exc, print_exception
+from traceback import print_exc
 import zipfile
 
 import pytest
 
 from Orbitool.version import VERSION
 from utils import pyuic, setup
+from utils.build_config import Config, read_config
 
 try:
     import jedi
@@ -22,43 +20,12 @@ except:
     pass
 
 
-@dataclass
-class Config:
-    not_compile_once: bool = False
-    compile: bool = True
-    test: bool = True
-    build: bool = True
-    zip_file: bool = True
-    multiprocess_upx: bool = True
-
-    upx_dir: str = ""
-
-
 CWD = Path.cwd()
-CONFIG_PATH = Path("build-config.json")
 DIST_DIR = Path("dist")
 EXE_DIR = DIST_DIR / "Orbitool"
 ZIP_PATH = DIST_DIR / \
     f"Orbitool-{VERSION.replace('.','_')}.zip"
 START_SCRIPT = CWD / "utils/StartOrbitool.bat"
-UPX_SUFFIX = {".exe", ".dll", ".pyd"}
-
-
-def read_config():
-    try:
-        config = Config(**json.loads(CONFIG_PATH.read_text()))
-        exists = True
-    except:
-        config = Config()
-        exists = False
-    not_compile_once = config.not_compile_once
-    if config.compile and not_compile_once:
-        config.not_compile_once = False
-    CONFIG_PATH.write_text(json.dumps(asdict(config), indent=4))
-    if config.compile and not_compile_once:
-        config.compile = False
-
-    return exists, config
 
 
 def run_pyuic(config: Config):
@@ -85,13 +52,6 @@ def run_test(config: Config):
     return True
 
 
-def do_upx(upx_dir, file):
-    try:
-        os.system(f"{upx_dir}/upx --lzma -q {file}")
-    except:
-        print_exc()
-
-
 def run_build(config: Config):
     if not config.upx_dir or not Path(config.upx_dir).exists():
         if not config.upx_dir:
@@ -99,21 +59,7 @@ def run_build(config: Config):
         else:
             print("cannot find upx path", config.upx_dir)
         return False
-    if config.multiprocess_upx:
-        # os.system(f"pyinstaller main.spec -y")
-        cpu_count = multiprocessing.cpu_count()
-        pool = multiprocessing.Pool(
-            cpu_count - 2 if cpu_count > 2 else cpu_count)
-
-        def files_iter():
-            for file in EXE_DIR.glob("**/*"):
-                if file.suffix in UPX_SUFFIX:
-                    yield config.upx_dir, file  # has bug, maybe need to ignore some files
-        pool.starmap_async(do_upx, files_iter(), error_callback=print_exc)
-        pool.close()
-        pool.join()
-    else:
-        os.system(f"pyinstaller main.spec --upx-dir {config.upx_dir} -y")
+    os.system(f"pyinstaller main.spec --upx-dir {config.upx_dir} -y")
     TARGET = DIST_DIR / START_SCRIPT.name
     shutil.copyfile(START_SCRIPT, TARGET)
     return True

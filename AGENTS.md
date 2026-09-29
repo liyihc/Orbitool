@@ -21,14 +21,16 @@ Managed by uv (Python 3.11, locked in `uv.lock`). See `docs/development.md`.
 
 ## Notes
 
-- Fresh clone has no compiled Cython extensions: run `uv run python util.py setup`
-  first (requires a C++ toolchain), or imports and tests fail
+- Fresh clone has no compiled Cython extensions: run
+  `uv run --group build python util.py setup` first (requires a C++ toolchain —
+  MinGW-w64 or MSVC, see `docs/build-environment.md`), or imports and tests fail
 - Do not edit generated `*Ui.py` / `*Ui.Py` files (header says "Do not edit"); edit the
   `*.ui` source and run `util.py pyuic`; application logic lives in `*UiPy.py`
 - Several generated UI files end in uppercase `.Py`; imports only work on
   case-insensitive filesystems (Windows)
-- Never commit data: `*.RAW`, `data/`, `*.Orbitool`, `*.csv` etc. are gitignored;
-  test fixtures under `models/*/tests/` are the tracked exception
+- Never commit data: `*.RAW`, `data/`, `*.Orbitool` etc. are gitignored; CSVs
+  are not blanket-ignored — test fixtures under `models/*/tests/` are tracked,
+  and data/output CSV paths get gitignored individually as needed
 - Thermo `.RAW` reading requires pythonnet + the tracked ThermoFisher DLLs
   (Windows/.NET only)
 - Qt Designer requires pyside2 installed in a *separate* environment

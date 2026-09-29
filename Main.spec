@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['Main.py'],
-             pathex=['put-your-path-here'],
+             pathex=[],
              binaries=[],
              datas=[
                 ('Orbitool/utils/readers/*.dll','Orbitool/utils/readers'),

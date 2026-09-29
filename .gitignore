@@ -21,7 +21,6 @@ log.txt.*
 *.wks
 *.Oribit*
 *.Orbit*
-*.csv
 *.pdf
 *.c
 *.cpp

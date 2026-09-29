@@ -7,9 +7,9 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) (installs Python 3.11 itself)
-- A **C++ compiler** for the Cython extension build: MSVC (Visual Studio Build
-  Tools, workload `VCTools`) is the route `distutils` supports out of the box on
-  Windows; a standalone MinGW-w64 GCC also works with extra configuration
+- A **C++ compiler** for the Cython extension build: MinGW-w64 GCC (recommended)
+  or MSVC — full setup, including UPX and `build-config.json`, is documented in
+  [build-environment.md](build-environment.md)
 
 ## Environment
 
@@ -20,8 +20,9 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 
 ## Everyday
 
-- `uv run python util.py setup` — compile the Cython extensions in place (needs a
-  C++ compiler, see Prerequisites). **Required on a fresh clone**: the compiled
+- `uv run --group build python util.py setup` — compile the Cython extensions in
+  place (needs a C++ compiler and the build dependency group, see
+  [build-environment.md](build-environment.md)). **Required on a fresh clone**: the compiled
   `*.pyd` files are gitignored, and without
   them imports and tests fail (including `models/spectrum/_denoise.py` and
   `_functions.py`, which are PE binaries disguised as `.py`). Only scans
@@ -38,8 +39,9 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 ## Packaging a release
 
 - `uv run --group build python build.py`
-  - First run creates `build-config.json` and exits — edit it, then run again
-    (notably `upx_dir` must point to a valid UPX directory).
+  - First run creates `build-config.json` and exits — edit it (notably `upx_dir`
+    must point to a valid UPX directory, `mingw_dir` the MinGW-w64 directory;
+    see [build-environment.md](build-environment.md)), then run again.
   - Pipeline: pyuic → Cython compile (deletes and rebuilds all `*.pyd`) → pytest →
     pyinstaller + UPX → zip.
   - Fails on purpose if `jedi` is importable — use a build environment without IDE
