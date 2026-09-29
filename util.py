@@ -40,10 +40,11 @@ if __name__ == "__main__":
                 os.path.join(root, "utils")], root)
     elif args.subparser_name == "setup":
         from utils.setup import main as setup, clear
+        orbitool_root = [os.path.join(root, "Orbitool")]
         if args.clear:
-            clear(root)
+            clear(orbitool_root)
         else:
-            setup(root)
+            setup(orbitool_root)
     elif args.subparser_name == "copy":
         from utils.copyCode import copyTo
         copyTo(root)

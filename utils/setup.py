@@ -29,7 +29,7 @@ def variableIn(variable: str, text: str):
                 
 def cythonSetup(filepath):
     cy = cythonize(filepath, annotate=True)
-    setup(ext_modules=cy, script_args=['build_ext'], include_dirs=[
+    setup(ext_modules=cy, packages=[], script_args=['build_ext'], include_dirs=[
           np.get_include()], options={'build_ext': {'inplace': True}})
 
 def main(root):

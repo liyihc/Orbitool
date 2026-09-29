@@ -38,3 +38,7 @@ build
 /setting.json
 # other
 /external-tools
+# local issue tracker
+.scratch/
+# uv
+.venv/
