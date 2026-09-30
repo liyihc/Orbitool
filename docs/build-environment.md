@@ -19,9 +19,10 @@ uv downloads the pinned Python 3.11 interpreter automatically.
 ## 2. Compiler (MinGW-w64, recommended)
 
 The extensions are compiled with MinGW-w64 GCC. Download a build from the
-[MinGW-W64-builds](https://www.mingw-w64.org/download/) page (the "MinGW-W64
-builds" project, winlibs-style release archives) and extract it anywhere — no
-installer, no system-wide changes.
+[MinGW-W64-builds](https://www.mingw-w64.org/downloads/) page (the "MinGW-W64
+builds" project, winlibs-style release archives, direct link:
+<https://github.com/niXman/mingw-builds-binaries/releases>) and extract it
+anywhere — no installer, no system-wide changes.
 
 When choosing a build, use these principles:
 
