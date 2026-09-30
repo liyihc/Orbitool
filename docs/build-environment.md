@@ -14,7 +14,7 @@ uv sync --group dev     # runtime + test dependencies
 uv sync --group build   # + packaging dependencies (Cython, pyinstaller)
 ```
 
-uv downloads the pinned Python 3.11 interpreter automatically.
+uv downloads the pinned Python 3.14 interpreter automatically.
 
 ## 2. Compiler (MinGW-w64, recommended)
 

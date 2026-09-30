@@ -19,6 +19,9 @@ class Tab(BaseTab):
 
         general = setting.general
 
+        def revert(line_edit: QtWidgets.QLineEdit, field: str):
+            line_edit.setText(type(general).model_fields[field].get_default())
+
         ui.defaultSelectCheckBox.setChecked(general.default_select)
 
         ui.multiCoresSpinBox.setMinimum(1)
@@ -28,13 +31,13 @@ class Tab(BaseTab):
         ui.timeFormatLineEdit.textChanged.connect(self.change_time_format)
         ui.timeFormatLineEdit.setText(general.time_format)
         ui.timeFormatRevertButton.clicked.connect(
-            lambda: ui.timeFormatLineEdit.setText(general.__fields__["time_format"].get_default()))
+            lambda: revert(ui.timeFormatLineEdit, "time_format"))
 
         ui.exportTimeFormatLineEdit.textChanged.connect(
             self.change_export_time_format)
         ui.exportTimeFormatLineEdit.setText(general.export_time_format)
         ui.exportTimeFormatRevertButton.clicked.connect(
-            lambda: ui.exportTimeFormatLineEdit.setText(general.__fields__["export_time_format"].get_default()))
+            lambda: revert(ui.exportTimeFormatLineEdit, "export_time_format"))
 
     def stash_setting(self, setting: _Setting):
         ui = self.ui

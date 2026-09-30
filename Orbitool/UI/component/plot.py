@@ -4,7 +4,7 @@ from PyQt6 import QtWidgets
 from PyQt6.QtCore import QTimer
 
 from matplotlib.backend_bases import FigureCanvasBase
-from matplotlib.backends.backend_qt5agg import FigureCanvas, NavigationToolbar2QT
+from matplotlib.backends.backend_qtagg import FigureCanvas, NavigationToolbar2QT
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 

@@ -50,6 +50,10 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[
-                    "pydantic_core/*.pyd"
+                    "pydantic_core/*.pyd",
+                    # Windows Defender false positive (Trojan:Win32/Commando.A!ml)
+                    # on the UPX-packed scipy binary; it quarantines the file and
+                    # the build dies during COLLECT.
+                    "scipy/special/cython_special*"
                ],
                name='Orbitool')

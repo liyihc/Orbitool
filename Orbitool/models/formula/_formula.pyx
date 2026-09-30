@@ -92,7 +92,7 @@ cdef class Formula:
         Formula({'C':1,'C[13]':1,'H':5,'O':1,'charge'=-1})
         Formula(C=1,H=2,O=1,charge=-1)
         '''
-        cdef str charge, e, m_str, num, k
+        cdef str charge, m_str, num, k
         cdef int32_t m_int
         cdef int32_t v
         cdef dict dic
@@ -359,7 +359,8 @@ cdef class Formula:
                 it = self.isotopes.upper_bound(p)
                 inc(p.first)
                 end = self.isotopes.upper_bound(p)
-                self.isotopes.erase(it, end)
+                self.isotopes.erase(<ints_map.const_iterator>it,
+                                    <ints_map.const_iterator>end)
             else:
                 it = self.isotopes.find(p)
                 if it!=self.isotopes.end():
@@ -500,7 +501,7 @@ cdef class Formula:
     @staticmethod
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    def from_numpy(np.ndarray[np.int_t, ndim=2] data):
+    def from_numpy(np.ndarray[np.int32_t, ndim=2] data):
         assert data.shape[1]==3
         cdef Formula f = Formula.__new__(Formula)
         cdef int32_t i
@@ -532,7 +533,8 @@ cdef class Formula:
         cdef Formula ret = Formula.__new__(Formula)
         cdef pair[int32_t, int32_t] it
         for it in self.elements:
-            ret.elements.insert(ret.elements.end(), pair[int32_t,int32_t](it.first, 1))
+            ret.elements.insert(<int_map.const_iterator>ret.elements.end(),
+                                pair[int32_t,int32_t](it.first, 1))
         return ret
 
     def __setitem__(self, str key, int32_t num):

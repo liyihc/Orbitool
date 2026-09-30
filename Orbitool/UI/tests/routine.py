@@ -12,7 +12,7 @@ loop: QtCore.QEventLoop = None
 
 
 def wait_not_busy():
-    if not setting.debug.DEBUG:
+    if not setting.debug.thread_block_gui:
         loop.exec()
     sleep()
 
@@ -32,8 +32,16 @@ def wait(thread: QtCore.QThread):
     loop.exec()
 
 
+def load_settings():
+    """apply setting.json (same as Main.py) so test_data_path/test_timeout can be configured"""
+    if config.config_path.exists():
+        setting.update_from(
+            setting.model_validate_json(config.config_path.read_text()))
+
+
 def init(window: MainUiPy.Window):
     global loop
+    load_settings()
     loop = QtCore.QEventLoop()
     window.manager.busy_signal.connect(loop.quit)
 
@@ -44,11 +52,15 @@ def qt_exit(app: QtWidgets.QApplication):
     timer.start(setting.test_timeout)
 
 
+def data_path() -> str:
+    return setting.test_data_path or str(config.ROOT_PATH.parent / 'data')
+
+
 def fileui(window: MainUiPy.Window):
     fileui = window.fileTab
     manager = fileui.manager
     workspace = manager.workspace
-    test.input(config.ROOT_PATH.parent / 'data')
+    test.input(data_path())
     sleep()
     fileui.addFolder()
 

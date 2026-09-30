@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# python 3.11
+# python 3.14
 try:
     import os
     import multiprocessing

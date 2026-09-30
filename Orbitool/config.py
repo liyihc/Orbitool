@@ -69,6 +69,8 @@ class _Setting(BaseModel):
     debug: Debug = Debug()
 
     test_timeout: int = 1
+    # directory scanned by Orbitool/UI/tests; empty -> <repo parent>/data
+    test_data_path: str = ""
     time_delta: timedelta = timedelta(seconds=1)
 
     plot_refresh_interval: float = 1
@@ -79,7 +81,7 @@ class _Setting(BaseModel):
         config_path.write_text(self.model_dump_json(indent=4))
 
     def update_from(self, new_config: "_Setting"):
-        for key in new_config.__fields__.keys():
+        for key in type(new_config).model_fields.keys():
             setattr(self, key, getattr(new_config, key))
 
     def format_time(self, dt: datetime):

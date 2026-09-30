@@ -41,7 +41,6 @@ def test_formula2():
     thread.start()
     thread.join(timeout=0.1)
     assert not thread.is_alive()
-    thread._stop()
     del thread
 
 

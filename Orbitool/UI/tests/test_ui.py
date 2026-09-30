@@ -5,7 +5,7 @@ from PyQt6 import QtWidgets, QtCore
 import tempfile
 # from pytestqt import qtbot
 from ..MainUiPy import Window
-from ...workspace import WorkSpace
+from ...models.workspace import WorkSpace
 
 from .routine import init, fileui, file_spectra, noise, qt_exit
 

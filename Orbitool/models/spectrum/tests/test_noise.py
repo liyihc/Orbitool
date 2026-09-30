@@ -22,7 +22,7 @@ def mass_int():
 
 formuals = [Formula("NO3-"), Formula("HN2O6-")]
 mass_points = np.fromiter((f.mass() for f in formuals), dtype=float)
-mass_point_deltas = np.ones_like(mass_points, dtype=int) * 5
+mass_point_deltas = np.ones_like(mass_points, dtype=np.int32) * 5
 
 
 def test_get_param(mass_int):

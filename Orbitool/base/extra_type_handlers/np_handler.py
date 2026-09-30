@@ -67,6 +67,12 @@ class NdArray(np.ndarray):
     def __class_getitem__(cls, type_shape: Tuple[type, Tuple[int]]): ...
 
     def __class_getitem__(cls, args):
+        # pydantic >= 2.10 evaluates string type parameters as forward references
+        # ("you should define 'float64'"), so resolve numpy dtype names eagerly.
+        if isinstance(args, str):
+            args = np.dtype(args)
+        elif isinstance(args, tuple) and args and isinstance(args[0], str):
+            args = (np.dtype(args[0]), *args[1:])
         return GenericAlias(cls, args)
 
     @classmethod

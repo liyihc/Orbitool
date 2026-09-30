@@ -1,7 +1,7 @@
 from __future__ import annotations
 from array import array
 from types import GenericAlias
-from typing import Any, Iterable, List, Literal, Tuple, Type, TypeVar, overload, Union, get_args
+from typing import Any, Iterable, List, Literal, Tuple, Type, TypeVar, overload, Union, get_args, get_origin
 from h5py import Dataset as H5Dataset, Group as H5Group
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
@@ -53,9 +53,19 @@ _UnicodeTypeCode = Literal["u"]
 _TypeCode = _IntTypeCode | _FloatTypeCode | _UnicodeTypeCode
 
 
+def _type_code_of(arg) -> _TypeCode:
+    """`Array['d']` stores the type code inside `Literal` so that pydantic does not
+    try to resolve the bare string as a forward reference (pydantic >= 2.10)."""
+    if get_origin(arg) is Literal:
+        return get_args(arg)[0]
+    return dtype_convert.get(arg, arg)
+
+
 class Array(array):
     def __class_getitem__(cls, args: _TypeCode):
         args = dtype_convert.get(args, args)
+        if isinstance(args, str):
+            args = Literal[args]
         return GenericAlias(Array, args)
 
     @classmethod
@@ -65,7 +75,7 @@ class Array(array):
         args = get_args(source_type)
         if not args:
             raise AnnotationError("Please provide args for Array")
-        type_code = args[0]
+        type_code = _type_code_of(args[0])
 
         def validate(value):
             if value is None:
@@ -82,7 +92,7 @@ class ArrayTypeHandler(ColumnHandler):
     target_type = Array
 
     def __post_init__(self):
-        self.type_code: _TypeCode = self.args[0]
+        self.type_code: _TypeCode = _type_code_of(self.args[0])
         self.dtype = np.dtype(self.type_code)
         self.helper = HomogeneousNdArrayHelper(self.dtype)
 

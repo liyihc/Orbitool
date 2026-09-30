@@ -1,12 +1,12 @@
 # Development commands
 
-The environment is managed by [uv](https://docs.astral.sh/uv/): Python 3.11 with the
+The environment is managed by [uv](https://docs.astral.sh/uv/): Python 3.14 with the
 exact dependency versions locked in `uv.lock` (direct dependencies live in
 `pyproject.toml`).
 
 ## Prerequisites
 
-- [uv](https://docs.astral.sh/uv/) (installs Python 3.11 itself)
+- [uv](https://docs.astral.sh/uv/) (installs Python 3.14 itself)
 - A **C++ compiler** for the Cython extension build: MinGW-w64 GCC (recommended)
   or MSVC — full setup, including UPX and `build-config.json`, is documented in
   [build-environment.md](build-environment.md)
@@ -16,7 +16,7 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 - `uv sync` — install runtime dependencies (`.venv/`)
 - `uv sync --group dev` — also install test dependencies (pytest, pandas)
 - `uv sync --group build` — also install packaging dependencies (Cython, pyinstaller)
-- `uv python install 3.11` — fetch the pinned interpreter if missing (uv does this automatically)
+- `uv python install 3.14` — fetch the pinned interpreter if missing (uv does this automatically)
 
 ## Everyday
 
@@ -30,6 +30,18 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 - `uv run --group dev pytest` — run the test suite (paths are listed in `pytest.ini`)
 - `uv run python Main.py [--debug] [--no_multiprocess] [--to_step file|noise|peak-fit|calibration]` —
   launch the app; exceptions are appended to `log.txt` in the repo root
+
+## UI tests
+
+`pytest.ini` excludes `Orbitool/UI/tests`: they drive the real GUI against real
+`.RAW` files, which are not committed. To run them:
+
+- put `test_data_path` (a folder scanned for `.RAW`) and, if processing is slow,
+  a larger `test_timeout` (seconds, default `1`) in `setting.json` at the repo
+  root; the tests read it the same way `Main.py` does. `test_data_path` defaults
+  to `<repo parent>/data`.
+- `uv run --group dev pytest Orbitool/UI/tests`
+- set `QT_QPA_PLATFORM=offscreen` to run without a visible window.
 
 ## UI code generation
 

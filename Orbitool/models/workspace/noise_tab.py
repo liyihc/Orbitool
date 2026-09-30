@@ -52,7 +52,7 @@ class NoiseGeneralSetting(BaseStructure):
         else:
             params = np.zeros([0, 2, 3])
         points = np.array(points)
-        deltas = np.array(deltas, dtype=int)
+        deltas = np.array(deltas, dtype=np.int32)
 
         return params, points, deltas
 

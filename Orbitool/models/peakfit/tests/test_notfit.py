@@ -50,4 +50,4 @@ def test_two_peak():
     int_sum = func.get_peak_sum([p])
     nptest.assert_approx_equal(int_sum, 9)
     area_sum = func.get_peak_sum([p], "area")
-    nptest.assert_approx_equal(area_sum, np.trapz(intensity, mz))
+    nptest.assert_approx_equal(area_sum, np.trapezoid(intensity, mz))

@@ -17,10 +17,10 @@ ctypedef map[pair[int32_t, int32_t], int32_t] ints_map
      
 
 cdef:
-    double _elements_mass(map[int32_t, int32_t]& elements)
-    bool _elements_eq(map[int32_t, int32_t]& elements, map[int32_t, int32_t]& elements)
-    double _mass_isotopes_mass(double elements, map[pair[int32_t, int32_t], int32_t]&isotopes)
-    double _elements_isotopes_mass(map[int32_t, int32_t]&elements, map[pair[int32_t, int32_t], int32_t]&isotopes)
+    double _elements_mass(int_map& elements)
+    bool _elements_eq(int_map& elements, int_map& elements)
+    double _mass_isotopes_mass(double elements, ints_map& isotopes)
+    double _elements_isotopes_mass(int_map& elements, ints_map& isotopes)
 
     class Formula:
         # atomic number -> number

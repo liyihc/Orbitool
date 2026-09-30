@@ -30,7 +30,7 @@ class BaseStructure(BaseModel):
     def __eq__(self, other):
         if type(self) != type(other):
             return False
-        for key in self.model_fields:
+        for key in type(self).model_fields:
             v = getattr(self, key)
             if isinstance(v, np.ndarray):
                 v2 = getattr(other, key)
@@ -149,7 +149,7 @@ class StructureTypeHandler(GroupTypeHandler):
     origin: BaseStructure
 
     def write_group_to_h5(self, group: H5Group, value: BaseStructure):
-        for k, field in value.model_fields.items():
+        for k, field in type(value).model_fields.items():
             if (v := getattr(value, k, None)) is None:
                 continue
             get_handler(field.annotation).write_to_h5(group, k, v)

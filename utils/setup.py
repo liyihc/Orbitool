@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 from Cython.Build import cythonize
 import numpy as np
 import os
@@ -60,7 +60,8 @@ def prepareMingw(mingw_dir: str):
 
 
 def cythonSetup(filepath, mingw=False):
-    cy = cythonize(filepath, annotate=True)
+    cy = cythonize(filepath, annotate=True,
+                   compiler_directives={'language_level': 3})
     if mingw:
         # MS_WIN64: MSVC-built pyconfig.h only defines it under _MSC_VER;
         # without it gcc sees SIZEOF_VOID_P=4 and Cython's static assert

@@ -29,7 +29,7 @@ def getMatlabTime(dt: datetime):
 
 
 def fromMatlabTime(t: float):
-    return (matlabTimeStandard + np.float_(t * 86400).astype('m8[s]')).astype(datetime)
+    return (matlabTimeStandard + np.float64(t * 86400).astype('m8[s]')).astype(datetime)
 
 
 excelTimeStandard = datetime(1899, 12, 31)

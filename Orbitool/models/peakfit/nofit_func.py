@@ -50,5 +50,5 @@ class NoFitFunc(BaseFunc):
             fitted_param=np.zeros((0,), dtype=float),
             peak_position=mz[pos],
             peak_intensity=intensity[pos],
-            area=np.trapz(intensity, mz)
+            area=np.trapezoid(intensity, mz)
         )

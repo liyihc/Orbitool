@@ -8,7 +8,7 @@ contributions from research institutions in China, France, and Finland.
 
 ## Development commands
 
-Managed by uv (Python 3.11, locked in `uv.lock`). See `docs/development.md`.
+Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/development.md`.
 
 ## Repository layout
 
