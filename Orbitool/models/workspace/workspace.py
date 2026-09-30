@@ -119,6 +119,10 @@ class WorkSpace:
         except:
             broken_entries.append(
                 new_space.data.calibrated_spectra.obj.name)
+        try:
+            new_space.data.time_series = self.data.time_series
+        except:
+            broken_entries.append(new_space.data.time_series.obj.name)
         new_space.save()
         new_space.close()
 
