@@ -22,7 +22,7 @@ from ..models.timeseries.timeseries import TimeSeries
 from ..utils.time_format.time_convert import converters
 from . import TimeseriesesUi
 from .component import Plot, factory
-from .manager import Manager, MultiProcess, state_node
+from .manager import Manager, MultiProcess, ui_task, background
 from .utils import TableUtils, savefile, showInfo
 
 
@@ -69,15 +69,19 @@ class Widget(QtWidgets.QWidget):
         return self.manager.workspace.data.time_series
 
     def restore(self):
-        for func, msg in self.showTimeseries():
-            func()
+        self._sync_timeseries()
+        self._show_timeseries_table()
         self.info.ui_state.restore_state(self.ui)
 
     def updateState(self):
         self.info.ui_state.store_state(self.ui)
 
-    @state_node
-    def calc_peak(self):
+    def _sync_timeseries(self):
+        if len(self.info.timeseries_infos) != len(self.timeseries):
+            self.info.sync(self.timeseries)
+
+    @ui_task
+    async def calc_peak(self):
         ui = self.ui
 
         series: List[TimeSeries] = []
@@ -132,16 +136,16 @@ class Widget(QtWidgets.QWidget):
 
         write_args = {"series": series}
 
-        series = yield CalcTimeseries(spectra, func_kwargs=func_args, write_kwargs=write_args), "calculate time series"
+        series = await background(CalcTimeseries(spectra, func_kwargs=func_args, write_kwargs=write_args), "calculate time series")
 
-        yield partial(self.timeseries.extend, series), "write to disk"
+        await background(partial(self.timeseries.extend, series), "write to disk")
         self.info.timeseries_infos.extend(
             TimeSeriesInfoRow.FromTimeSeries(s) for s in series)
 
-        yield from self.showTimeseries()
+        await self.showTimeseries()
 
-    @state_node
-    def calc_sum(self):
+    @ui_task
+    async def calc_sum(self):
         ui = self.ui
 
         mz_min = ui.rangeMinDoubleSpinBox.value()
@@ -164,20 +168,20 @@ class Widget(QtWidgets.QWidget):
         }
         write_args = {"series": series}
 
-        series = yield CalcSumTimeSeries(spectra, func_kwargs=func_args, write_kwargs=write_args), "calculate mz range sum series"
+        series = await background(CalcSumTimeSeries(spectra, func_kwargs=func_args, write_kwargs=write_args), "calculate mz range sum series")
 
         self.timeseries.append(series)
         self.info.timeseries_infos.append(
             TimeSeriesInfoRow.FromTimeSeries(series))
 
-        yield from self.showTimeseries()
+        await self.showTimeseries()
 
-    def showTimeseries(self):
+    async def showTimeseries(self):
         if len(self.info.timeseries_infos) != len(self.timeseries):
-            def func():
-                self.info.sync(self.timeseries)
-            yield func, "update timeseries info"
+            await background(lambda: self.info.sync(self.timeseries), "update timeseries info")
+        self._show_timeseries_table()
 
+    def _show_timeseries_table(self):
         table = self.ui.tableWidget
         table.clearContents()
         table.setRowCount(0)
@@ -199,8 +203,8 @@ class Widget(QtWidgets.QWidget):
                 format(s.position_max, '.5f')))
         table.resizeColumnsToContents()
 
-    @state_node(withArgs=True)
-    def showTimeseriesAt(self, index: int, checked: bool):
+    @ui_task
+    async def showTimeseriesAt(self, index: int, checked: bool):
         shown_series = self.shown_series
         ax = self.plot.ax
         if checked:
@@ -226,15 +230,15 @@ class Widget(QtWidgets.QWidget):
         ax.legend()
         self.plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def seriesClicked(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def seriesClicked(self, item: QtWidgets.QTableWidgetItem):
         row = item.row()
         self.info.show_index = row
 
         self.click_series.emit()
 
-    @state_node
-    def removeSelect(self):
+    @ui_task
+    async def removeSelect(self):
         indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
         timeseries = self.timeseries
         self.info.sync(timeseries)
@@ -253,19 +257,19 @@ class Widget(QtWidgets.QWidget):
             self.info.show_index = int(show_index)
         self.shown_series = {
             index - (index > indexes).sum(): line for index, line in self.shown_series.items()}
-        yield from self.showTimeseries()
+        await self.showTimeseries()
 
-    @state_node
-    def removeAll(self):
+    @ui_task
+    async def removeAll(self):
         self.info.timeseries_infos.clear()
         self.timeseries.clear()
         self.info.show_index = -1
         self.shown_series.clear()
-        yield from self.showTimeseries()
+        await self.showTimeseries()
         self.plot.ax.clear()
 
-    @state_node(withArgs=True)
-    def export(self, target: Literal["intensity", "deviation"]):
+    @ui_task
+    async def export(self, target: Literal["intensity", "deviation"]):
         series = self.timeseries
         self.info.sync(series)
         infos = self.info.timeseries_infos
@@ -331,10 +335,10 @@ class Widget(QtWidgets.QWidget):
                     indexes[select] += 1
                     writer.writerow(row)
 
-        yield func
+        await background(func)
 
-    @state_node(mode='x')
-    def rescale(self):
+    @ui_task(mode="join")
+    async def rescale(self):
         plot = self.plot
         series = self.timeseries
         if len(plot.ax.get_lines()) == 0:
@@ -363,8 +367,8 @@ class Widget(QtWidgets.QWidget):
         plot.ax.set_ylim(b, t)
         plot.canvas.draw()
 
-    @state_node
-    def logScale(self):
+    @ui_task
+    async def logScale(self):
         log = self.ui.logScaleCheckBox.isChecked()
         ax = self.plot.ax
         ax.set_yscale('log' if log else 'linear')

@@ -15,7 +15,7 @@ from . import (CalibrationUiPy, file_tab, formulas, MainUi, MassDefectUiPy,
                PeakShapeUiPy, SpectraListUiPy, SpectrumUiPy, TimeseriesesUiPy,
                TimeseriesUiPy)
 from . import utils as UiUtils
-from .manager import Manager, MultiProcess, state_node
+from .manager import Manager, MultiProcess, state_node, ui_task
 
 
 class Window(QtWidgets.QMainWindow):
@@ -258,11 +258,11 @@ class Window(QtWidgets.QMainWindow):
         self.spectrumDw.show()
         self.spectrumDw.raise_()
 
-    @state_node(mode='x', withArgs=True)
-    def noise_tab_finish(self, result):
+    @ui_task(mode="join")
+    async def noise_tab_finish(self, result):
         self.workspace.info.peak_shape_tab.spectrum = result[0]
         self.ui.tabWidget.setCurrentWidget(self.peakShapeTab)
-        return self.peakShapeTab.showPeak()  # yield
+        await self.peakShapeTab.showPeak()
 
     @state_node(mode='x')
     def peak_shape_tab_finish(self):

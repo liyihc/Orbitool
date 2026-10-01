@@ -5,7 +5,7 @@ from PyQt6 import QtCore, QtWidgets
 
 from ..models.spectrum.spectrum import Spectrum
 from . import SpectrumUi
-from .manager import Manager, state_node
+from .manager import Manager, ui_task, background
 from .utils import savefile
 
 
@@ -46,8 +46,8 @@ class Widget(QtWidgets.QWidget):
                 item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
                 tableWidget.setItem(i, j, item)
 
-    @state_node
-    def export(self):
+    @ui_task
+    async def export(self):
         spectrum = self.info.spectrum
         if not spectrum:
             return
@@ -59,6 +59,6 @@ class Widget(QtWidgets.QWidget):
                 writer = csv.writer(f)
                 writer.writerow(['mz', 'intensity'])
                 writer.writerows(zip(spectrum.mz, spectrum.intensity))
-        yield func
+        await background(func)
         
 

@@ -21,7 +21,7 @@ from Orbitool.utils import binary_search
 
 from . import NoiseUi, component
 from .component import factory
-from .manager import Manager, MultiProcess, state_node
+from .manager import Manager, MultiProcess, ui_task, background
 from .utils import (TableUtils, get_tablewidget_selected_row, savefile, set_header_sizes,
                     showInfo)
 
@@ -99,12 +99,12 @@ class Widget(QtWidgets.QWidget):
             widget.setItem(i, 2, QtWidgets.QTableWidgetItem(
                 format(formula.formula.mass(), ".6f")))
 
-    @state_node
-    def showSelectedSpectrum(self):
-        yield from self.readSelectedSpectrum()
+    @ui_task
+    async def showSelectedSpectrum(self):
+        await self.readSelectedSpectrum()
         self.ui.toolBox.setCurrentIndex(0)
 
-    def readSelectedSpectrum(self):
+    async def readSelectedSpectrum(self):
         workspace = self.manager.workspace
         index = self.manager.getters.spectra_list_selected_index.get()
         info_list = workspace.info.file_tab.spectrum_infos
@@ -136,7 +136,7 @@ class Widget(QtWidgets.QWidget):
             else:
                 return False, None
 
-        success, spectrum = yield read_and_average, "read & average"
+        success, spectrum = await background(read_and_average, "read & average")
 
         if success:
             self.info.current_spectrum = spectrum
@@ -154,26 +154,30 @@ class Widget(QtWidgets.QWidget):
             self.plot.canvas.draw()
             self.y_rescale(self.ui.yLogCheckBox.isChecked())
 
-    @state_node
-    def addFormula(self):
-        formula = Formula(self.ui.lineEdit.text())
-        self.info.general_setting.noise_formulas.append(
-            NoiseFormulaParameter(formula=formula))
+    @ui_task
+    async def addFormula(self):
+        try:
+            formula = Formula(self.ui.lineEdit.text())
+            self.info.general_setting.noise_formulas.append(
+                NoiseFormulaParameter(formula=formula))
+        except Exception:
+            self.showNoiseFormula()
+            raise
         self.showNoiseFormula()
 
-    addFormula.except_node(showNoiseFormula)
-
-    @state_node
-    def delFormula(self):
-        indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
-        for index in reversed(indexes):
-            del self.info.general_setting.noise_formulas[index]
+    @ui_task
+    async def delFormula(self):
+        try:
+            indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
+            for index in reversed(indexes):
+                del self.info.general_setting.noise_formulas[index]
+        except Exception:
+            self.showNoiseFormula()
+            raise
         self.showNoiseFormula()
 
-    delFormula.except_node(showNoiseFormula)
-
-    @state_node
-    def calcNoise(self):
+    @ui_task
+    async def calcNoise(self):
         info = self.info
         spectrum = info.current_spectrum
 
@@ -209,7 +213,7 @@ class Widget(QtWidgets.QWidget):
 
         result = info.general_result
 
-        rets, noises, noise_split = yield func, "get noise infomations"
+        rets, noises, noise_split = await background(func, "get noise infomations")
 
         result.poly_coef, result.global_noise_std, slt, params = rets
         result.noise = NoiseArray(noise=noises[0], LOD=noises[1])
@@ -234,8 +238,8 @@ class Widget(QtWidgets.QWidget):
 
         self.showNoise()
 
-    @state_node
-    def reclacNoise(self):
+    @ui_task
+    async def reclacNoise(self):
         table = self.ui.paramTableWidget
         checkeds, noises, lods = deque(), deque(), deque()
 
@@ -277,7 +281,7 @@ class Widget(QtWidgets.QWidget):
             else:
                 noise_split = (None,) * 4
             return noise, LOD, noise_split
-        noise, LOD, noise_split = yield func, "recalc noise"
+        noise, LOD, noise_split = await background(func, "recalc noise")
         result.noise = NoiseArray(noise=noise, LOD=LOD)
         result.spectrum_split = MzIntensity(
             mz=noise_split[0], intensity=noise_split[1])
@@ -382,8 +386,8 @@ class Widget(QtWidgets.QWidget):
         self.moveToGlobalNoise()
         plot.canvas.draw()
 
-    @state_node
-    def exportDenoise(self):
+    @ui_task
+    async def exportDenoise(self):
         info = self.info
         subtract = self.ui.substractCheckBox.isChecked()
         spectrum = info.current_spectrum
@@ -408,7 +412,7 @@ class Widget(QtWidgets.QWidget):
 
             return s
 
-        s: Spectrum = yield func, "doing denoise"
+        s: Spectrum = await background(func, "doing denoise")
 
         def export():
             with open(f, 'w', newline='') as file:
@@ -417,10 +421,10 @@ class Widget(QtWidgets.QWidget):
                 writer.writerows(self.manager.tqdm(
                     zip(s.mz, s.intensity), length=len(s.mz)))
 
-        yield export, "export"
+        await background(export, "export")
 
-    @state_node
-    def exportNoisePeaks(self):
+    @ui_task
+    async def exportNoisePeaks(self):
         info = self.info
         spectrum = info.current_spectrum
         noise_setting = info.general_setting
@@ -437,7 +441,7 @@ class Widget(QtWidgets.QWidget):
                 info.general_result.global_noise_std, params, points, deltas, noise_setting.n_sigma)
             return mz, intensity
 
-        mz, intensity = yield func, "get noise peak"
+        mz, intensity = await background(func, "get noise peak")
 
         def export():
             with open(f, 'w', newline='') as file:
@@ -445,10 +449,10 @@ class Widget(QtWidgets.QWidget):
                 writer.writerow(["peak position", "peak intensity"])
                 writer.writerows(self.manager.tqdm(
                     zip(mz, intensity), length=len(mz)))
-        yield export, "export"
+        await background(export, "export")
 
-    @state_node
-    def denoise(self):
+    @ui_task
+    async def denoise(self):
         info = self.info
         subtract = self.ui.substractCheckBox.isChecked()
         spectrum = info.current_spectrum
@@ -467,10 +471,10 @@ class Widget(QtWidgets.QWidget):
 
             return s
 
-        s = yield func, "doing denoise"
+        s = await background(func, "doing denoise")
 
         read_from_file = ReadFromFile(self.manager.workspace)
-        yield read_from_file, "read and average all spectra"
+        await background(read_from_file, "read and average all spectra")
 
         noise_setting.subtract = subtract
         noise_setting.spectrum_dependent = self.ui.dependentCheckBox.isChecked()
@@ -478,17 +482,17 @@ class Widget(QtWidgets.QWidget):
 
         self.callback.emit((s,))
 
-    @state_node
-    def skip(self):
-        yield ReadFromFile(self.manager.workspace), "read and average all spectra"
+    @ui_task
+    async def skip(self):
+        await background(ReadFromFile(self.manager.workspace), "read and average all spectra")
         info = self.info
         info.skip = True
         if info.current_spectrum is None:
-            yield from self.readSelectedSpectrum()
+            await self.readSelectedSpectrum()
         self.callback.emit((info.current_spectrum,))
 
-    @state_node(withArgs=True)
-    def moveToTableClickedNoise(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def moveToTableClickedNoise(self, item: QtWidgets.QTableWidgetItem):
         row = item.row()
         info = self.info
         if info.current_spectrum is None:
@@ -563,8 +567,8 @@ class Widget(QtWidgets.QWidget):
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
 
-    @state_node
-    def scaleToSpectrum(self):
+    @ui_task
+    async def scaleToSpectrum(self):
         info = self.info
         if info.current_spectrum is None:
             return
@@ -578,8 +582,8 @@ class Widget(QtWidgets.QWidget):
 
         self.plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def yLogToggle(self, is_log: bool):
+    @ui_task
+    async def yLogToggle(self, is_log: bool):
         ax = self.plot.ax
         ax.set_yscale('log' if is_log else 'linear')
 
@@ -593,8 +597,8 @@ class Widget(QtWidgets.QWidget):
         self.y_rescale(is_log)
         self.plot.canvas.draw()
 
-    @state_node
-    def y_rescale_click(self):
+    @ui_task
+    async def y_rescale_click(self):
         is_log = self.ui.yLogCheckBox.isChecked()
         self.y_rescale(is_log)
         self.plot.canvas.draw()
@@ -625,8 +629,8 @@ class Widget(QtWidgets.QWidget):
 
         ax.set_ylim(y_min, y_max)
 
-    @state_node(withArgs=True)
-    def y_times(self, times: float):
+    @ui_task
+    async def y_times(self, times: float):
         plot = self.plot
         ax = plot.ax
         y_min, y_max = ax.get_ylim()

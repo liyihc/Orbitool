@@ -5,7 +5,7 @@ from PyQt6 import QtWidgets
 
 from ..utils.time_format.time_convert import converters
 from . import TimeseriesUi
-from .manager import Manager, state_node
+from .manager import Manager, ui_task, background
 from .utils import savefile
 from Orbitool import setting
 
@@ -37,8 +37,8 @@ class Widget(QtWidgets.QWidget):
     def updateState(self):
         self.info.ui_state.store_state(self.ui)
 
-    @state_node
-    def retention_time_toggle(self):
+    @ui_task
+    async def retention_time_toggle(self):
         self.showSeries()
 
     def showSeries(self):
@@ -73,12 +73,12 @@ class Widget(QtWidgets.QWidget):
                 table.setItem(index, 3, QtWidgets.QTableWidgetItem(
                     format(deviation[index], '.3f')))
     
-    @state_node(mode='e')
-    def showSeries_CatchException(self):
+    @ui_task(mode="light")
+    async def showSeries_CatchException(self):
         self.showSeries()
 
-    @state_node
-    def export(self):
+    @ui_task
+    async def export(self):
         timeseries = self.manager.workspace.data.time_series
         self.info.sync(timeseries)
         index = self.info.show_index
@@ -110,4 +110,4 @@ class Widget(QtWidgets.QWidget):
                     writer.writerow([c(prt_time)
                                     for c in time_formats.values()] + row)
 
-        yield func
+        await background(func)

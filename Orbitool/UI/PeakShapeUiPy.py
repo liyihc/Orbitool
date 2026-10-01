@@ -17,7 +17,7 @@ from Orbitool.models.spectrum import FittedPeak
 
 from .. import setting
 from . import PeakShapeUi, component
-from .manager import Manager, Thread, state_node
+from .manager import Manager, Thread, ui_task, background
 from .utils import savefile, showInfo
 
 
@@ -73,17 +73,17 @@ class Widget(QtWidgets.QWidget):
     def info(self):
         return self.manager.workspace.info.peak_shape_tab
 
-    @state_node
-    def showButtonClicked(self):
-        yield from self.showPeak()
+    @ui_task
+    async def showButtonClicked(self):
+        await self.showPeak()
 
-    @state_node
-    def cancel(self):
+    @ui_task
+    async def cancel(self):
         self.info.peaks_manager.cancel()
 
         self.showNormedPeaks()
 
-    def showPeak(self):
+    async def showPeak(self):
         info = self.info
         peak_num = self.ui.spinBox.value()
         if info.spectrum is None:
@@ -109,7 +109,7 @@ class Widget(QtWidgets.QWidget):
                 norm_peaks)
             return manager, func
 
-        info.peaks_manager, info.func = yield generate_peak_manager, "manage peaks"
+        info.peaks_manager, info.func = await background(generate_peak_manager, "manage peaks")
 
         self.showNormedPeaks()
 
@@ -203,12 +203,12 @@ class Widget(QtWidgets.QWidget):
             return line,
         return ()
 
-    @state_node
-    def finishPeakShape(self):
+    @ui_task
+    async def finishPeakShape(self):
         self.callback.emit(())
 
-    @state_node
-    def export(self):
+    @ui_task
+    async def export(self):
         spectrum = self.info.spectrum
         ret, f = savefile("Save Peak Shape Info", "CSV file(*.csv)",
                           f"peak_shape_info {spectrum.start_time.strftime(setting.general.export_time_format)}"
