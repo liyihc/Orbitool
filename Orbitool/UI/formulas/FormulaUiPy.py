@@ -3,7 +3,7 @@ from functools import partial
 from typing import Callable, List, Union, Optional
 
 from PyQt6 import QtWidgets, QtCore, QtGui
-from Orbitool.UI.manager import Manager, state_node
+from Orbitool.UI.manager import Manager, ui_task
 from Orbitool.models.formula import Formula, parse_element, ElementState
 from Orbitool.UI.utils import get_tablewidget_selected_row, showInfo
 from . import FormulaResultUiPy
@@ -157,8 +157,8 @@ class Widget(QtWidgets.QWidget):
         for i in range(tree.columnCount()):
             tree.resizeColumnToContents(i)
     
-    @state_node(withArgs=True, mode="a")
-    def hide_element_infos(self, a:bool=True):
+    @ui_task(mode="light")
+    async def hide_element_infos(self, a:bool=True):
         b = not a
         ui = self.ui
         ui.elementHidePushButton.setVisible(b)
@@ -167,8 +167,8 @@ class Widget(QtWidgets.QWidget):
         ui.elementAddToolButton.setVisible(b)
         
 
-    @state_node(mode="a")
-    def show_element_infos(self):
+    @ui_task(mode="light")
+    async def show_element_infos(self):
         self.hide_element_infos(False)
         ui = self.ui
         info = self.info
@@ -207,8 +207,8 @@ class Widget(QtWidgets.QWidget):
                 table.setItem(row, col, f2text1(val))
         table.resizeColumnsToContents()
 
-    @state_node(mode="a")
-    def update_calc(self):
+    @ui_task(mode="light")
+    async def update_calc(self):
         info = self.info
         ui = self.ui
         info.mz_min = ui.mzMinDoubleSpinBox.value()
@@ -222,8 +222,8 @@ class Widget(QtWidgets.QWidget):
         info.calc_gen.DBEMax = ui.dbeMaxDoubleSpinBox.value()
         self.show_info()
 
-    @state_node(withArgs=True, mode="a")
-    def isotope_item_clicked(self, item: QtWidgets.QTreeWidgetItem, col: int):
+    @ui_task(mode="light")
+    async def isotope_item_clicked(self, item: QtWidgets.QTreeWidgetItem, col: int):
         tree: QtWidgets.QTreeWidget = self.ui.isotopeTreeWidget
         gen = self.info.calc_gen
         key = item.text(0)
@@ -267,8 +267,8 @@ class Widget(QtWidgets.QWidget):
             tree.setItemWidget(item, col, sb)
             sb.setFocus()
 
-    @state_node
-    def isotope_add(self):
+    @ui_task
+    async def isotope_add(self):
         text: str = self.ui.isotopeLineEdit.text()
         try:
             gen = self.info.calc_gen
@@ -282,8 +282,8 @@ class Widget(QtWidgets.QWidget):
                 del gen.isotope_usable[text]
             showInfo(str(e))
 
-    @state_node(withArgs=True, mode="a")
-    def element_item_clicked(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task(mode="light")
+    async def element_item_clicked(self, item: QtWidgets.QTableWidgetItem):
         row = item.row()
         col = item.column()
         ele = self.info.calc_gen.element_states
@@ -339,8 +339,8 @@ class Widget(QtWidgets.QWidget):
             table.resizeColumnsToContents()
             dsb.setFocus()
 
-    @state_node
-    def element_add(self):
+    @ui_task
+    async def element_add(self):
         text: str = self.ui.elementLineEdit.text()
         try:
             e, i = parse_element(text)
@@ -352,8 +352,8 @@ class Widget(QtWidgets.QWidget):
         except Exception as e:
             showInfo(str(e))
 
-    @state_node
-    def calc(self):
+    @ui_task
+    async def calc(self):
         manager = self.manager
 
         text = self.ui.inputLineEdit.text()

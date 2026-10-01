@@ -11,7 +11,7 @@ from Orbitool.utils import binary_search
 
 from .. import setting
 from . import PeakListUi
-from .manager import Manager, state_node
+from .manager import Manager, ui_task
 from .PeakFitFloatUiPy import Window as PeakFloatWin
 from .utils import get_tablewidget_selected_row, savefile
 
@@ -138,8 +138,8 @@ class Widget(QtWidgets.QWidget):
         indexes = info.shown_indexes
         return [indexes[index] for index in selectedindex]
 
-    @state_node
-    def goto_mass(self):
+    @ui_task
+    async def goto_mass(self):
         mass = self.ui.doubleSpinBox.value()
         peaks = self.info.peaks
         indexes = self.info.shown_indexes
@@ -148,8 +148,8 @@ class Widget(QtWidgets.QWidget):
         self.scroll_to_index(index)
         self.manager.bind.peak_fit_left_index.emit_except("peaklist", index)
 
-    @state_node(mode='n', withArgs=True)
-    def scrolled(self, index):
+    @ui_task(mode="light")
+    async def scrolled(self, index):
         if self.ui.bindPlotCheckBox.isChecked():
             self.manager.bind.peak_fit_left_index.emit_except(
                 "peaklist", index)
@@ -159,16 +159,16 @@ class Widget(QtWidgets.QWidget):
             with self.no_send_slider():
                 self.ui.tableWidget.verticalScrollBar().setSliderPosition(index)
 
-    @state_node(withArgs=True)
-    def openPeakFloatWin(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def openPeakFloatWin(self, item: QtWidgets.QTableWidgetItem):
         row = item.row()
         win = PeakFloatWin.get_or_create(
             self.manager, self.info.shown_indexes[row])
         win.show()
         win.raise_()
 
-    @state_node
-    def exportSpectrum(self):
+    @ui_task
+    async def exportSpectrum(self):
         spectrum = self.info.spectrum
         ret, f = savefile(
             "Save Spectrum", "CSV file(*.csv)",
@@ -183,8 +183,8 @@ class Widget(QtWidgets.QWidget):
             writer.writerow(['mz', 'intensity'])
             writer.writerows(zip(spectrum.mz, spectrum.intensity))
 
-    @state_node
-    def exportPeaks(self):
+    @ui_task
+    async def exportPeaks(self):
         info = self.info
         spectrum = info.spectrum
 
@@ -217,8 +217,8 @@ class Widget(QtWidgets.QWidget):
                      peak.formulas[0].mass() - 1) if len(peak.formulas) == 1 else '',
                     raw_split_num[orginal_indexes[indexes[index]]]])
 
-    @state_node
-    def exportIsotopes(self):
+    @ui_task
+    async def exportIsotopes(self):
         info = self.info
         spectrum = info.spectrum
 

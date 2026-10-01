@@ -10,7 +10,7 @@ from Orbitool.models.file import FileSpectrumInfo
 
 from .. import setting
 from . import SpectraListUi, utils
-from .manager import Manager, state_node
+from .manager import Manager, ui_task, background
 from .utils import (TableUtils, get_tablewidget_selected_row, openfolder, set_header_sizes,
                     showInfo)
 
@@ -54,8 +54,8 @@ class Widget(QtWidgets.QWidget):
     def updateState(self):
         self.info.ui_state.store_state(self.ui)
 
-    @state_node(mode='e')
-    def comboBox_changed(self):
+    @ui_task(mode="light")
+    async def comboBox_changed(self):
         self._comboBox_changed()
 
     def _comboBox_changed(self):
@@ -131,8 +131,8 @@ class Widget(QtWidgets.QWidget):
             raise ValueError("Please select a spectrum in spectra list")
         return self.info.shown_indexes[indexes[0]]
 
-    @state_node(withArgs=True)
-    def export(self, mode: Literal["select", "all"]):
+    @ui_task
+    async def export(self, mode: Literal["select", "all"]):
         ret, folder = openfolder("choose a folder to place spectra")
 
         if not ret:
@@ -173,4 +173,4 @@ class Widget(QtWidgets.QWidget):
                     writer.writerow(['mz', 'intensity'])
                     writer.writerows(zip(spectrum.mz, spectrum.intensity))
             os.startfile(folder)
-        yield func
+        await background(func)

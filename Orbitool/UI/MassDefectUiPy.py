@@ -11,7 +11,7 @@ from Orbitool.models.spectrum import FittedPeak
 from Orbitool.models.workspace.massdefect import Clr, Gry
 from . import MassDefectUi
 from .component import Plot
-from .manager import Manager, state_node
+from .manager import Manager, ui_task
 from .utils import savefile
 
 
@@ -51,8 +51,8 @@ class Widget(QtWidgets.QWidget):
     def info(self):
         return self.manager.workspace.info.mass_defect_tab
 
-    @state_node
-    def calc(self):
+    @ui_task
+    async def calc(self):
         self.calculateMassDefect()
         self.plotMassDefect()
 
@@ -179,8 +179,8 @@ class Widget(QtWidgets.QWidget):
 
         plot.canvas.draw()
 
-    @state_node(mode='n')
-    def replot(self):
+    @ui_task(mode="light")
+    async def replot(self):
         ax = self.plot.ax
         x = ax.get_xlim()
         y = ax.get_ylim()
@@ -190,8 +190,8 @@ class Widget(QtWidgets.QWidget):
         ax.set_ylim(*y)
         self.plot.canvas.draw()
 
-    @state_node
-    def export(self):
+    @ui_task
+    async def export(self):
         info = self.info
         ret, f = savefile("Mass Defect", "CSV file(*.csv)", info.clr_title)
 

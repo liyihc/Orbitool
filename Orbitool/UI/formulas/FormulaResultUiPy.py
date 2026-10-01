@@ -8,7 +8,7 @@ from pyteomics.mass.mass import isotopologues
 from Orbitool.models.formula import Formula
 from Orbitool.models.spectrum import FittedPeak
 from Orbitool.UI.component import Plot
-from Orbitool.UI.manager import Manager, state_node
+from Orbitool.UI.manager import Manager, ui_task
 from Orbitool.UI.utils import get_tablewidget_selected_row
 from Orbitool.utils import binary_search
 
@@ -66,8 +66,8 @@ class Window(QtWidgets.QMainWindow):
     def peaks(self):
         return self.manager.workspace.info.peak_fit_tab.peaks
 
-    @state_node
-    def calc(self):
+    @ui_task
+    async def calc(self):
         input = self.ui.lineEdit.text()
         _, mass, formulas, peak_index = calc(self.manager, input)
         self.mass = mass
@@ -75,8 +75,8 @@ class Window(QtWidgets.QMainWindow):
         self.peak_index = peak_index
         self.showResult()
 
-    @state_node(mode='x')
-    def showResult(self):
+    @ui_task(mode="join")
+    async def showResult(self):
         mass = self.mass
         formulas = self.formulas
 
@@ -114,8 +114,8 @@ class Window(QtWidgets.QMainWindow):
 
         self.plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def plot_row(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def plot_row(self, item: QtWidgets.QTableWidgetItem):
         row = item.row()
         formula = self.formulas[row].findOrigin()
         origin = formula.absoluteAbundance()
@@ -185,8 +185,8 @@ class Window(QtWidgets.QMainWindow):
 
         self.plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def edit_peak(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def edit_peak(self, item: QtWidgets.QTableWidgetItem):
         table = self.ui.isotopesTableWidget
         row = item.row()
         formula = Formula(table.item(row, 0).text())
@@ -200,8 +200,8 @@ class Window(QtWidgets.QMainWindow):
             win.show()
             win.raise_()
 
-    @state_node
-    def accept(self):
+    @ui_task
+    async def accept(self):
         if len(self.formulas) <= 1:
             self.acceptSignal.emit(self.formulas)
             self.close()
@@ -222,8 +222,8 @@ class Window(QtWidgets.QMainWindow):
         self.acceptSignal.emit(formulas)
         self.close()
 
-    @state_node
-    def acceptEmpty(self):
+    @ui_task
+    async def acceptEmpty(self):
         self.acceptSignal.emit([])
         self.close()
 

@@ -7,7 +7,7 @@ from PyQt6 import QtCore, QtWidgets
 from Orbitool.models.peakfit import MassListItem, MassListHelper
 from Orbitool.models.formula import Formula
 from . import MassListUi
-from .manager import Manager, state_node
+from .manager import Manager, ui_task, background
 from .utils import get_tablewidget_selected_row, openfile, savefile
 
 
@@ -62,16 +62,16 @@ class Widget(QtWidgets.QWidget):
             table.setItem(index, 1, QtWidgets.QTableWidgetItem(
                 ', '.join(str(f) for f in mass.formulas)))
 
-    @state_node(mode="e")
-    def showMassList_CatchException(self):
+    @ui_task(mode="light")
+    async def showMassList_CatchException(self):
         self.showMasslist()
 
-    @state_node
-    def updateRtol(self):
+    @ui_task
+    async def updateRtol(self):
         self.info.rtol = self.ui.doubleSpinBox.value() * 1e-6
 
-    @state_node
-    def addMass(self):
+    @ui_task
+    async def addMass(self):
         ui = self.ui
         text = ui.addItemLineEdit.text()
         rtol = self.info.rtol
@@ -91,16 +91,16 @@ class Widget(QtWidgets.QWidget):
 
         self.showMasslist()
 
-    @state_node
-    def rmMass(self):
+    @ui_task
+    async def rmMass(self):
         indexes = get_tablewidget_selected_row(self.ui.tableWidget)
         masslist = self.info.masslist
         for index in reversed(indexes):
             masslist.pop(index)
         self.showMasslist()
 
-    @state_node(withArgs=True)
-    def group_plus(self, times: float):
+    @ui_task
+    async def group_plus(self, times: float):
         abs_times = abs(times)
         sign = times / abs_times
         group = Formula(self.ui.groupLineEdit.text())
@@ -140,8 +140,8 @@ class Widget(QtWidgets.QWidget):
                 MassListHelper.addMassTo(ret, item, rtol)
         return ret
 
-    @state_node
-    def merge(self):
+    @ui_task
+    async def merge(self):
         ret, f = openfile("select mass list to merge", "CSV file(*.csv)")
         if not ret:
             return
@@ -153,20 +153,20 @@ class Widget(QtWidgets.QWidget):
             imported = self.read_masslist_from(f)
             MassListHelper.mergeInto(masslist, imported, rtol)
 
-        yield func
+        await background(func)
         self.showMasslist()
 
-    @state_node
-    def import_masslist(self):
+    @ui_task
+    async def import_masslist(self):
         ret, f = openfile("select mass list to import", "CSV file(*.csv)")
         if not ret:
             return
 
-        self.info.masslist = yield partial(self.read_masslist_from, f), "read mass list"
+        self.info.masslist = await background(partial(self.read_masslist_from, f), "read mass list")
         self.showMasslist()
 
-    @state_node
-    def export(self):
+    @ui_task
+    async def export(self):
         ret, f = savefile("save mass list", "CSV file(*.csv)", "masslist.csv")
         if not ret:
             return
@@ -198,4 +198,4 @@ class Widget(QtWidgets.QWidget):
                         writer.writerow(
                             [item.position, '/'.join(str(formula) for formula in item.formulas)])
 
-        yield func, "export mass list"
+        await background(func, "export mass list")
