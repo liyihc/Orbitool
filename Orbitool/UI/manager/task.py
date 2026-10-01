@@ -1,6 +1,7 @@
 import functools
 import inspect
 import logging
+import weakref
 from typing import Any, Callable, Optional
 
 from PyQt6 import QtCore
@@ -131,12 +132,82 @@ class Driver:
         self.on_error(e)
 
 
+def _forward_arguments(sig: inspect.Signature, func: Callable,
+                       host: Any, args: tuple, kwargs: dict):
+    """
+    Trickle one slot invocation's arguments down to what the decorated
+    coroutine's signature declares (its first, host parameter excluded
+    when that parameter can take the host positionally — a leading
+    `*args` with no declared self keeps the host in the forwarded set
+    and `sig.bind` drops it into the varargs):
+
+    - positional arguments are truncated to the declared positional
+      slots (all of them when the coroutine declares `*args`);
+    - keyword arguments are kept only when a declared parameter or
+      `**kwargs` can absorb them (dropped ones are logged at debug);
+    - what remains must still bind: a required parameter that cannot be
+      filled raises a clear TypeError instead of being silently
+      dropped (duplicates of a positionally filled parameter likewise).
+
+    Returns the (positional, keyword) pair to call `func(host, ...)` with.
+    """
+    name = getattr(func, "__qualname__", None) or repr(func)
+    parameters = list(sig.parameters.values())
+    if parameters and parameters[0].kind in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD):
+        parameters = parameters[1:]
+    positional_count = 0
+    var_positional = False
+    for param in parameters:
+        if param.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                          inspect.Parameter.POSITIONAL_OR_KEYWORD):
+            positional_count += 1
+        elif param.kind is inspect.Parameter.VAR_POSITIONAL:
+            var_positional = True
+            break
+        else:
+            break
+    if var_positional:
+        positional = tuple(args)
+    else:
+        positional = tuple(args[:positional_count])
+
+    var_keyword = any(param.kind is inspect.Parameter.VAR_KEYWORD
+                      for param in parameters)
+    accepted = {param.name for param in parameters
+                if param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                  inspect.Parameter.KEYWORD_ONLY)}
+    forwarded = {}
+    for key, value in kwargs.items():
+        if var_keyword or key in accepted:
+            forwarded[key] = value
+        else:
+            logger.debug(
+                "dropping keyword argument %r: %s does not declare it",
+                key, name)
+
+    try:
+        sig.bind(host, *positional, **forwarded)
+    except TypeError as exc:
+        raise TypeError(
+            f"cannot forward call arguments args={args!r}"
+            f" kwargs={kwargs!r} to {name}: {exc}") from exc
+    return positional, forwarded
+
+
 class ui_task:
     """
     Decorator for async UI tasks: `@ui_task` on an `async def` method,
     worker boundaries written as `await background(...)`. The wrapper
     enforces the mode's busy policy and drives the coroutine through the
-    shared Driver. `mode` accepts exactly three words (no letter aliases):
+    shared Driver. Slot call arguments are forwarded according to the
+    decorated coroutine's own signature — excess positional arguments
+    are truncated, extra keywords are dropped unless `**kwargs` absorbs
+    them, and an unbindable required parameter raises through the
+    uniform error fallback — so there is no `withArgs` switch. Method
+    binding is cached with weak references, so closed hosts can be
+    garbage collected. `mode` accepts exactly three words (no letter aliases):
 
     - default: hold busy, refuse to start while busy ("Wait for process");
     - join: hold busy, start even while busy (pipeline relay);
@@ -157,8 +228,9 @@ class ui_task:
             raise TypeError(
                 f"ui_task expects a callable task function, got {func!r}")
         self._func = func
+        self._signature = inspect.signature(func) if func is not None else None
         self._mode = mode
-        self._bind_cache = functools.lru_cache(None)(self._bind)
+        self._bind_cache = weakref.WeakKeyDictionary()
 
     @property
     def func(self) -> Optional[Callable]:
@@ -196,8 +268,10 @@ class ui_task:
                         manager.end_task()
 
             try:
+                pos_args, kw_args = _forward_arguments(
+                    self._signature, func, selfWidget, args, kwargs)
                 driver = Driver(
-                    func(selfWidget, *args, **kwargs), manager=manager,
+                    func(selfWidget, *pos_args, **kw_args), manager=manager,
                     on_done=on_done, on_error=on_error)
             except Exception as e:
                 on_error(e)
@@ -209,13 +283,46 @@ class ui_task:
     def __call__(self, func: Callable):
         if self._func is not None:
             raise RuntimeError("ui_task is already bound to a function")
+        signature = inspect.signature(func)
         self._func = func
+        self._signature = signature
         return self
 
     def __get__(self, obj, objtype=None):
         if obj is None or isinstance(obj, ui_task):
             return self
-        return self._bind_cache(obj)
+        try:
+            cached = self._bind_cache.get(obj)
+        except TypeError:
+            # host is not hashable or not weakref-able: bind without caching
+            return self._bind(obj)
+        if cached is not None:
+            return cached
+        bound = self._bind(obj)
+        self._bind_cache[obj] = bound
+        return bound
 
     def _bind(self, obj):
-        return functools.partial(self.func, obj)
+        if self._func is None:
+            raise TypeError(
+                "ui_task has no task function; decorate a function with it"
+                " before binding")
+        wrapper = self.func
+        name = getattr(self._func, "__qualname__", None) or repr(self._func)
+        try:
+            ref = weakref.ref(obj)
+        except TypeError:
+            # hosts without weak-reference support (e.g. __slots__ without
+            # __weakref__) get a plain strong binding, never cached
+            return functools.partial(wrapper, obj)
+
+        @functools.wraps(self._func)
+        def bound(*args, **kwargs):
+            host = ref()
+            if host is None:
+                raise ReferenceError(
+                    f"cannot call {name}: its host object has been"
+                    " garbage collected")
+            return wrapper(host, *args, **kwargs)
+
+        return bound

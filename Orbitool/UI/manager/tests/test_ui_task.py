@@ -1,8 +1,10 @@
+import gc
 import importlib
 import logging
 import threading
 import time
 import traceback
+import weakref
 
 import pytest
 from PyQt6 import QtCore, QtWidgets
@@ -306,3 +308,247 @@ def test_legacy_generator_and_new_coroutine_share_manager(show_info):
     assert captured == ["legacy", "new"]
     assert not widget.manager.busy
     assert show_info == []
+
+
+def test_slot_arguments_forwarded_by_signature(show_info):
+    class W(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.seen = []
+
+        @ui_task(mode="light")
+        async def takes_all(self, first, second):
+            self.seen.append(("all", first, second))
+
+        @ui_task(mode="light")
+        async def takes_one(self, skip):
+            self.seen.append(("one", skip))
+
+        @ui_task(mode="light")
+        async def takes_none(self):
+            self.seen.append(("none",))
+
+        @ui_task(mode="light")
+        async def takes_rest(self, first, **rest):
+            self.seen.append(("rest", first, rest))
+
+        @ui_task(mode="light")
+        async def takes_varargs(self, *items):
+            self.seen.append(("varargs", tuple(items)))
+
+    w = W()
+    w.takes_all(1, 2)                      # full signature -> everything
+    w.takes_one(True, "extra-from-signal")  # partial -> excess truncated
+    w.takes_one(skip=False)                # keyword form binds too
+    w.takes_one(True, extra="dropped")     # unknown keyword dropped
+    w.takes_none(1, 2, 3)                  # no parameters -> nothing
+    w.takes_rest(1, x=2, y=3)              # **kwargs absorbs leftovers
+    w.takes_varargs(1, 2, 3)               # *args accepts every positional
+
+    assert w.seen == [
+        ("all", 1, 2),
+        ("one", True),
+        ("one", False),
+        ("one", True),
+        ("none",),
+        ("rest", 1, {"x": 2, "y": 3}),
+        ("varargs", (1, 2, 3)),
+    ]
+    assert not w.manager.busy
+    assert show_info == []
+
+
+def test_unbindable_arguments_raise_clear_error_and_reset_busy(
+        show_info, caplog):
+    class W(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.ran = []
+
+        @ui_task
+        async def needs_required(self, required):
+            self.ran.append(required)
+
+    w = W()
+    events = []
+    w.manager.busy_signal.connect(events.append)
+
+    with caplog.at_level(logging.ERROR, logger="Orbitool"):
+        w.needs_required()  # required argument missing -> clear error
+
+    assert w.ran == []
+    with_traceback = [record for record in caplog.records if record.exc_info]
+    assert with_traceback, "binding failure must be logged with exc_info"
+    assert show_info and show_info[0][0].startswith(
+        "cannot forward call arguments")
+    assert "needs_required" in show_info[0][0]
+    # begin_task ran before the failure, the fallback gave the count back
+    assert events == [True, False]
+    assert not w.manager.busy
+
+
+def test_new_api_rejects_with_args_switch():
+    async def sample(widget):
+        pass
+
+    with pytest.raises(TypeError):
+        ui_task(withArgs=True)
+    with pytest.raises(TypeError):
+        ui_task(sample, withArgs=True)
+
+
+def test_legacy_state_node_still_honors_with_args():
+    widget = _Widget()
+    received = []
+
+    @node(withArgs=True)
+    def legacy(widget, value):
+        received.append(value)
+
+    legacy.func(widget, 42)
+
+    assert received == [42]
+    assert not widget.manager.busy
+
+
+def test_ui_task_binding_cache_releases_host():
+    class W(_Widget):
+        @ui_task(mode="light")
+        async def task(self):
+            pass
+
+    w = W()
+    ref = weakref.ref(w)
+    bound = w.task
+    assert bound is w.task  # binding identity is cached while host lives
+    bound()                 # and the binding works
+
+    del w
+    gc.collect()
+    assert ref() is None  # the cache keeps only a weak reference
+
+    with pytest.raises(ReferenceError):
+        bound()  # a stale binding fails loudly instead of crashing later
+
+
+def test_legacy_state_node_binding_still_pins_host():
+    # contrast group for the ui_task weak cache above: the old decorator
+    # lru_caches __get__ with the host object as a strong key, so bound
+    # hosts stay alive until state_node itself is deleted (ticket 12)
+    class W:
+        @node
+        def legacy(self):
+            if False:
+                yield
+
+    w = W()
+    ref = weakref.ref(w)
+    bound = w.legacy
+    assert bound is w.legacy
+    del w, bound
+    gc.collect()
+    assert ref() is not None  # strong-reference cache pins the host
+
+
+def test_leading_varargs_without_self_keeps_host_and_signal_args(show_info):
+    seen = []
+
+    class W(_Widget):
+        @ui_task(mode="light")
+        async def seed(*args):  # no declared self: host lands in *args
+            seen.append(args)
+
+    w = W()
+    w.seed(1, 2)
+
+    assert seen == [(w, 1, 2)]  # host plus every signal argument, in order
+    assert show_info == []
+
+
+def test_duplicate_positional_and_keyword_argument_falls_back(
+        show_info, caplog):
+    class W(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.ran = []
+
+        @ui_task
+        async def two(self, a):
+            self.ran.append(a)
+
+    w = W()
+    with caplog.at_level(logging.ERROR, logger="Orbitool"):
+        w.two(1, a=2)
+
+    assert w.ran == []  # binding failed before the coroutine was created
+    assert any(record.exc_info for record in caplog.records)
+    assert show_info and show_info[0][0].startswith(
+        "cannot forward call arguments")
+    assert "two" in show_info[0][0]
+    assert not w.manager.busy  # begin/end pair gave the count back
+
+
+def test_default_values_fill_omitted_arguments(show_info):
+    class W(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.seen = []
+
+        @ui_task(mode="light")
+        async def defaulted(self, a=1, b=2):
+            self.seen.append((a, b))
+
+    w = W()
+    w.defaulted()      # zero arguments -> every default
+    w.defaulted(5)     # one argument -> a given, b default
+    w.defaulted(b=7)   # keyword form -> b given, a default
+
+    assert w.seen == [(1, 2), (5, 2), (1, 7)]
+    assert show_info == []
+
+
+def test_keyword_only_parameter_accepts_keyword_position_fails(show_info):
+    class W(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.seen = []
+
+        @ui_task(mode="light")
+        async def kwonly(self, first, *, flag):
+            self.seen.append((first, flag))
+
+    w = W()
+    w.kwonly(1, flag=True)
+    assert w.seen == [(1, True)]
+
+    w.kwonly(1, True)  # positional value cannot fill the keyword-only slot
+    assert w.seen == [(1, True)]  # body not re-run
+    assert show_info and show_info[0][0].startswith(
+        "cannot forward call arguments")
+    assert "flag" in show_info[0][0]
+
+
+def test_signal_connect_truncates_and_disconnects_by_identity(show_info):
+    class Emitter(QtCore.QObject):
+        fired = QtCore.pyqtSignal(int, str)
+
+    class W(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.seen = []
+            self.emitter = Emitter()
+
+        @ui_task(mode="light")
+        async def slot(self, number):  # 1-parameter slot for a 2-arg signal
+            self.seen.append(number)
+
+    w = W()
+    w.emitter.fired.connect(w.slot)
+    w.emitter.fired.emit(7, "extra")  # excess positional truncated
+
+    assert w.seen == [7]
+    assert show_info == []
+
+    w.emitter.fired.disconnect(w.slot)  # identity cache: same object works
+    w.emitter.fired.emit(8, "extra")
+    assert w.seen == [7]
