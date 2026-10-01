@@ -19,35 +19,20 @@ uv downloads the pinned Python 3.14 interpreter automatically.
 ## 2. Compiler (MinGW-w64, recommended)
 
 The extensions are compiled with MinGW-w64 GCC. Download a build from the
-[MinGW-W64-builds](https://www.mingw-w64.org/downloads/) page (the "MinGW-W64
-builds" project, winlibs-style release archives, direct link:
+[MinGW-W64-builds](https://www.mingw-w64.org/downloads/) page (direct link:
 <https://github.com/niXman/mingw-builds-binaries/releases>) and extract it
-anywhere — no installer, no system-wide changes.
+anywhere — no installer, no system-wide changes. Any recent build matching
+these works (version number does not matter): **x86_64**, threads model
+**posix**, exceptions model **seh**, runtime **ucrt**, C and C++ enabled.
 
-When choosing a build, use these principles:
+Point `build-config.json`'s `mingw_dir` at the extracted directory (the one
+containing `bin\gcc.exe`), see section 4. `gcc` is not expected on `PATH` —
+do not use `where gcc` to check for a toolchain.
 
-- architecture **x86_64** (64-bit)
-- threads model **posix**
-- exceptions model **seh**
-- runtime **ucrt**
-- C and C++ languages enabled
-
-Any recent build matching the above works; the version number itself does not
-matter.
-
-Enable it by pointing `build-config.json` at the extracted directory (the one
-containing `bin\gcc.exe`), see section 4.
-
-What the build scripts do with it (handled automatically, for reference):
-
-- prepend `<mingw_dir>\bin` to `PATH` for the compile
-- compile with `--compiler=mingw32`
-- define `MS_WIN64`: the MSVC-flavoured `pyconfig.h` shipped with Python only
-  defines it under `_MSC_VER`; without it gcc computes `SIZEOF_VOID_P = 4` and
-  Cython's static assert fails (or worse, silently mis-sizes types)
-- link with `-static` so the `.pyd` files do not depend on
-  `libstdc++`/`libgcc`/`libwinpthread` DLLs and load on machines without a
-  MinGW runtime
+The build scripts then, automatically: prepend `<mingw_dir>\bin` to `PATH`;
+compile with `--compiler=mingw32` and define `MS_WIN64` (without it gcc
+computes `SIZEOF_VOID_P = 4` against Python's MSVC-flavoured `pyconfig.h`);
+link `-static` so the `.pyd` files load without MinGW runtime DLLs.
 
 ### MSVC (alternative)
 
@@ -60,9 +45,9 @@ winget install --id Microsoft.VisualStudio.2022.BuildTools -e `
   --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 ```
 
-When `uv run python util.py setup` fails because MSVC is missing, it prints
-both options and — in an interactive terminal — offers to take a MinGW-w64
-directory directly, saves it to `build-config.json`, and retries.
+When `util.py setup` fails for a missing MSVC, it prints both options and —
+interactively — offers to record a MinGW-w64 directory in `build-config.json`
+and retries.
 
 ## 3. UPX (packaging only)
 
@@ -73,9 +58,9 @@ containing `upx.exe`.
 
 ## 4. build-config.json
 
-Created on the first `build.py` run (it then asks you to edit the file and
-rerun), or created by `util.py setup` when you answer its MinGW prompt. It is
-gitignored — local paths never enter the repository. Full reference:
+Created by the first `build.py` run (edit it, then rerun) or by
+`util.py setup`'s MinGW prompt. Gitignored — local paths never enter the
+repository. Full reference:
 
 | field | default | meaning |
 |---|---|---|
@@ -127,6 +112,7 @@ project venv, not an environment with IDE helper packages.
 | `Microsoft Visual C++ 14.0 or greater is required` | Either install MSVC (section 2) or set `mingw_dir` (section 4) |
 | `cannot find "<...>\bin\gcc.exe"` | `mingw_dir` points at the wrong directory — it must contain `bin\gcc.exe` |
 | `ImportError: DLL load failed` when importing a `.pyd` | Stale `.pyd` built without `-static` — recompile: `util.py setup --clear` then `util.py setup` |
+| `ImportError: cannot import name '_element' ... partially initialized module ... circular import` after upgrading Python | Not a circular import — `.pyd` tagged with the old interpreter (e.g. `cp311-...` vs `cp314-...`) — recompile: `util.py setup --clear` then `util.py setup` |
 | `please provide upx path` during packaging | Set `upx_dir` in `build-config.json` (section 3) |
 | Collection errors in pytest mentioning missing modules | Extensions not compiled yet — run `uv run --group build python util.py setup` |
 | `ModuleNotFoundError: No module named 'Cython'` | Missing build group — `uv sync --group build` (or prefix the command with `uv run --group build`) |
