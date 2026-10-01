@@ -42,11 +42,13 @@ class Widget(QtWidgets.QWidget):
         self.showSeries()
 
     def showSeries(self):
+        timeseries = self.manager.workspace.data.time_series
+        self.info.sync(timeseries)
         index = self.info.show_index
         if index < 0:
             return
         retention_time = self.ui.retentionTimeCheckBox.isChecked()
-        series = self.manager.workspace.data.time_series[index]
+        series = timeseries[index]
 
         table = self.ui.tableWidget
         table.clearContents()
@@ -77,12 +79,14 @@ class Widget(QtWidgets.QWidget):
 
     @state_node
     def export(self):
+        timeseries = self.manager.workspace.data.time_series
+        self.info.sync(timeseries)
         index = self.info.show_index
         if index < 0:
             return
 
         info = self.info.timeseries_infos[index]
-        series = self.manager.workspace.data.time_series[index]
+        series = timeseries[index]
         ret, f = savefile("timeseries", "CSV file(*.csv)",
                           f"timeseries {info.get_name()}")
         if not ret:

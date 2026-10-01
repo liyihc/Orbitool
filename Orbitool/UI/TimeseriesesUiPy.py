@@ -175,8 +175,7 @@ class Widget(QtWidgets.QWidget):
     def showTimeseries(self):
         if len(self.info.timeseries_infos) != len(self.timeseries):
             def func():
-                self.info.timeseries_infos = [
-                    TimeSeriesInfoRow.FromTimeSeries(s) for s in self.timeseries]
+                self.info.sync(self.timeseries)
             yield func, "update timeseries info"
 
         table = self.ui.tableWidget
@@ -238,10 +237,20 @@ class Widget(QtWidgets.QWidget):
     def removeSelect(self):
         indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
         timeseries = self.timeseries
+        self.info.sync(timeseries)
         infos = self.info.timeseries_infos
+        show_index = self.info.show_index
         for index in reversed(indexes):
             del infos[index]
             del timeseries[index]
+        if show_index >= 0:
+            if show_index in indexes:
+                show_index = -1
+            else:
+                show_index -= (indexes < show_index).sum()
+                if show_index >= len(infos):
+                    show_index = -1
+            self.info.show_index = int(show_index)
         self.shown_series = {
             index - (index > indexes).sum(): line for index, line in self.shown_series.items()}
         yield from self.showTimeseries()
@@ -250,14 +259,16 @@ class Widget(QtWidgets.QWidget):
     def removeAll(self):
         self.info.timeseries_infos.clear()
         self.timeseries.clear()
+        self.info.show_index = -1
         self.shown_series.clear()
         yield from self.showTimeseries()
         self.plot.ax.clear()
 
     @state_node(withArgs=True)
     def export(self, target: Literal["intensity", "deviation"]):
-        infos = self.info.timeseries_infos
         series = self.timeseries
+        self.info.sync(series)
+        infos = self.info.timeseries_infos
         if len(infos) == 0 or all(not info.valid() for info in infos):
             return
         time_min = min(info.time_min for info in infos if info.valid())

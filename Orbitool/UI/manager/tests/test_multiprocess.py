@@ -55,7 +55,7 @@ class p(MultiProcess):
 def test_single():
     # config.DEBUG = True
     setting.debug.NO_MULTIPROCESS = True
-    app = QtWidgets.QApplication([])
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     num = 20
     file = {}
     pp = p(file, {"length": 20})

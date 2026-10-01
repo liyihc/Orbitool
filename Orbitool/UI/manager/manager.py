@@ -1,6 +1,7 @@
 from __future__ import annotations
 from contextlib import contextmanager
 
+import logging
 import weakref
 from datetime import datetime
 from functools import wraps
@@ -208,9 +209,22 @@ class MySignal(Generic[T]):
     def emit(self, *args, **kwargs): ...
 
     def emit(self, *args, **kwargs):
-        # emit
-        for handler in self.handlers:
-            handler()(*args, **kwargs)
+        # emit; one failing handler must not prevent the others from running.
+        # handlers live in a set, so which error propagates first is arbitrary;
+        # the propagated one goes to the caller (a state_node logs it, an
+        # unguarded caller surfaces it to the top-level exception handler)
+        first_error = None
+        for handler in list(self.handlers):
+            try:
+                handler()(*args, **kwargs)
+            except Exception as e:
+                if first_error is None:
+                    first_error = e
+                else:
+                    logger = logging.getLogger("Orbitool")
+                    logger.error(str(e), exc_info=e)
+        if first_error is not None:
+            raise first_error
 
 
 class DataBindSignal(Generic[T]):

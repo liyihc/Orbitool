@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Union
 from datetime import datetime, timedelta
 
 from Orbitool.base import BaseRowStructure
+from Orbitool.base.disk_structure import IDiskListView
 from ..formula import FormulaList
 from ..timeseries import TimeSeries
 from .base import BaseInfo
@@ -44,3 +45,10 @@ class TimeSeriesInfoRow(BaseRowStructure):
 class TimeseriesInfo(BaseInfo):
     timeseries_infos: List[TimeSeriesInfoRow] = []
     show_index: int = -1
+
+    def sync(self, time_series: Union[List[TimeSeries], IDiskListView[TimeSeries]]):
+        if len(self.timeseries_infos) != len(time_series):
+            self.timeseries_infos = [
+                TimeSeriesInfoRow.FromTimeSeries(s) for s in time_series]
+        if not -1 <= self.show_index < len(time_series):
+            self.show_index = -1
