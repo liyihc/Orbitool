@@ -2,6 +2,14 @@
 
 Issues and specs for this repo live as markdown files in `.scratch/`.
 
+## Tooling note
+
+`.scratch/` is both dot-prefixed and listed in `.gitignore`, so agent file
+tools that skip hidden/ignored paths (Glob, Grep) will not see it and report
+"No files found" even for an explicit path. Read ticket files through the
+shell instead, e.g. `Get-ChildItem -Recurse .scratch` or
+`rg --hidden --no-ignore <pattern> .scratch`.
+
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`
