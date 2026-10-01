@@ -12,6 +12,9 @@ No RAW data is available, so file dialogs are answered through
 `Orbitool.UI.utils.test.input`, `os.startfile` is stubbed, and the full
 main window is built offscreen. `thread_block_gui` makes workers run
 inline for deterministic busy edges.
+
+Placed next to the dominant subpackage of the batch (see the migration
+section of `docs/ui-tasks.md`).
 """
 import importlib
 
@@ -20,9 +23,10 @@ from PyQt6 import QtWidgets
 
 from Orbitool import setting
 from ...models.formula import Formula
-from .. import formulas
 from ..MainUiPy import Window
 from ..utils import test as uitest
+from . import FormulaResultUiPy
+from .FormulaResultUiPy import Window as FormulaResultWindow
 
 # the package rebinds names it re-exports, so the module itself must be
 # resolved through importlib, not through attribute lookup
@@ -168,7 +172,7 @@ def test_formula_calc_opens_result_window(env, monkeypatch):
         def show(self):
             captured["opened"] = True
 
-    monkeypatch.setattr(formulas.FormulaResultUiPy, "Window", _StubResultWin)
+    monkeypatch.setattr(FormulaResultUiPy, "Window", _StubResultWin)
     formula.calc()
 
     assert captured.get("opened") is True
@@ -182,7 +186,7 @@ def test_formula_calc_opens_result_window(env, monkeypatch):
 
 def test_formula_result_join_starts_while_busy(env):
     manager = env.window.manager
-    win = formulas.FormulaResultWindow(
+    win = FormulaResultWindow(
         manager, "CH4", 16.0313, [Formula("CH4")], None)
     try:
         manager.set_busy(True)

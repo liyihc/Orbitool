@@ -357,6 +357,14 @@ Migrate file by file; after each file run the manager tests
 (`uv run --group dev pytest Orbitool/UI/manager/tests`) and smoke-test the
 tab.
 
+Regression tests a migration ticket adds are part of the default run and
+live next to the migrated code: co-locate inside the migrated package when
+that package is the whole batch (`Orbitool/UI/file_tab/test_file_tab_migration.py`),
+otherwise pick one representative subpackage for the batch and add it to
+`pytest.ini` `testpaths` (e.g. `Orbitool/UI/formulas/`). Do not drop them in
+`Orbitool/UI/tests/` — that folder is the real-GUI/RAW suite excluded from
+the default run.
+
 | Old (`@state_node`) | New (`@ui_task`) |
 |---|---|
 | `@state_node` (default, `mode='w'`) | `@ui_task` |
@@ -367,12 +375,24 @@ tab.
 | `def` + `yield closure, "msg"` | `async def` + `await background(closure, "msg")` |
 | `yield worker_instance, "msg"` | `await background(worker_instance, "msg")` |
 | `xxx.except_node(handler)` | delete — rewrite the handler as `try/except` or `finally` in the task body |
+| `@state_node` method with **no** `yield` (a plain main-thread update, e.g. the `mode='e'`/`'n'`/`'a'` one-liners) | `@ui_task` + `async def` (no `await` inside) |
 
 Notes:
 
 - `yield closure` with no message → `await background(closure)` (default
   message `"processing"`); `ret = yield closure, "msg"` →
   `ret = await background(closure, "msg")`.
+- A method with no `yield` still becomes `async def`: the task is handed to
+  the shared send/throw driver, which requires a coroutine (or a legacy
+  generator). A plain `def` under `@ui_task` fails at call time
+  (`TypeError: task must be a generator or coroutine`), so a missed `async`
+  is loud rather than silent.
+- Residue check after migrating a file: `grep -E
+  'state_node|except_node|withArgs'` must be empty. A leftover `\byield\b`
+  is *not* a miss by itself — `@contextlib.contextmanager` helpers and
+  nested helper generators (e.g. a local `iter_select()`) legitimately keep
+  `yield`; only a `yield` left inside a former task body is an unmigrated
+  task (and it would also fail the coroutine requirement above).
 - Both `except_node` registration styles disappear: the decorator form on a
   same-named method (`@addThermoFile.except_node`) and the explicit call form
   (`addFormula.except_node(handler)`).
