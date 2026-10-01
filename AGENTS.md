@@ -41,6 +41,8 @@ Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/development.md`.
 - Code and docs land together: when a change alters a command, workflow, layout, or
   behavior that `docs/`, `readme.md`, or `CONTEXT.md`/`docs/adr/` describes, update
   that doc in the same change
+- Writing tab background operations (`ui_task` / `background`, mode words, error and
+  abort contracts, `@state_node` migration table): see `docs/ui-tasks.md`
 
 ## Agent skills
 

@@ -552,3 +552,238 @@ def test_signal_connect_truncates_and_disconnects_by_identity(show_info):
     w.emitter.fired.disconnect(w.slot)  # identity cache: same object works
     w.emitter.fired.emit(8, "extra")
     assert w.seen == [7]
+
+
+# cookbook twins: every code example in docs/ui-tasks.md has an executable
+# assertion here so the cookbook cannot drift from the API (ticket 05)
+
+
+def test_cookbook_single_step(show_info):
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.label = None
+            self.msgs = []
+            self.manager.msg.connect(self.msgs.append)
+
+        @ui_task
+        async def denoise(self):
+            folder = "sample.raw"  # main thread: read inputs
+            noise = await background(lambda: len(folder), "denoising")  # worker
+            self.label = str(noise)  # main thread: touch widgets
+
+    tab = Tab()
+    events = []
+    tab.manager.busy_signal.connect(events.append)
+
+    tab.denoise()
+
+    assert tab.label == "10"
+    assert tab.msgs == ["denoising"]
+    assert events == [True, False]
+    assert not tab.manager.busy
+    assert show_info == []
+
+
+def test_cookbook_multi_step_pipeline(monkeypatch, show_info):
+    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
+    main_ident = threading.get_ident()
+    segments = []
+
+    class Tab(_Widget):
+        @ui_task
+        async def run_pipeline(self):
+            segments.append(("main", threading.get_ident()))
+            first = await background(
+                lambda: (threading.get_ident(), 1), "scanning")
+            segments.append(("worker", first[0]))
+            segments.append(("main", threading.get_ident()))
+            second = await background(
+                lambda: (threading.get_ident(), 2), "analyzing")
+            segments.append(("worker", second[0]))
+            segments.append(("main", threading.get_ident(), second[1]))
+
+    tab = Tab()
+    tab.run_pipeline()
+    _wait_until(lambda: not tab.manager.busy)
+
+    assert [segment[0] for segment in segments] == [
+        "main", "worker", "main", "worker", "main"]
+    for segment in segments:
+        if segment[0] == "main":
+            assert segment[1] == main_ident
+        else:
+            assert segment[1] != main_ident
+    assert segments[-1][2] == 2
+    assert show_info == []
+
+
+def test_cookbook_multiprocess_instance(show_info):
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.count = None
+            self.file = None
+
+        @ui_task
+        async def analyze(self):
+            file = {}
+            count = await background(
+                collect_p(file, {"length": 3}), "analyzing")
+            self.count = count
+            self.file = file
+
+    tab = Tab()
+    tab.analyze()
+
+    assert tab.count == 3
+    assert tab.file == {"ret": [0, 1, 2]}
+    assert not tab.manager.busy
+    assert show_info == []
+
+
+def test_cookbook_join_relay(show_info):
+    class Emitter(QtCore.QObject):
+        stepFinished = QtCore.pyqtSignal()
+
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.emitter = Emitter()
+            self.emitter.stepFinished.connect(self.on_step_finished)
+            self.log = []
+            self.relay_busy = []
+
+        @ui_task
+        async def run(self):
+            await background(lambda: "step one", "step one")
+            self.emitter.stepFinished.emit()  # relay while holding busy
+            await background(lambda: "step two", "step two")
+            self.log.append("run done")
+
+        @ui_task(mode="join")
+        async def on_step_finished(self):
+            self.relay_busy.append(self.manager.busy)
+            self.log.append("relay")
+
+    tab = Tab()
+    events = []
+    tab.manager.busy_signal.connect(events.append)
+
+    tab.run()
+
+    assert tab.log == ["relay", "run done"]  # join started despite busy
+    assert tab.relay_busy == [True]
+    assert events == [True, False]  # count 1 -> 2 -> 1 -> 0, one edge pair
+    assert not tab.manager.busy
+    assert show_info == []
+
+
+def test_cookbook_light_slot(show_info):
+    class Emitter(QtCore.QObject):
+        selectionChanged = QtCore.pyqtSignal(int)
+
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.emitter = Emitter()
+            self.emitter.selectionChanged.connect(self.refresh_preview)
+            self.preview = []
+
+        @ui_task(mode="light")
+        async def refresh_preview(self):  # no parameters: signal arg truncated
+            self.preview.append(self.manager.busy)
+
+    tab = Tab()
+    events = []
+    tab.manager.busy_signal.connect(events.append)
+
+    tab.emitter.selectionChanged.emit(3)
+
+    assert tab.preview == [False]  # ran, and never saw itself as busy
+    assert events == []  # busy never touched
+    assert not tab.manager.busy
+    assert show_info == []
+
+
+def test_cookbook_slot_arguments(show_info):
+    class Emitter(QtCore.QObject):
+        fired = QtCore.pyqtSignal(int, str)
+
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.emitter = Emitter()
+            self.seen = []
+            self.emitter.fired.connect(self.on_fired)
+
+        @ui_task(mode="light")
+        async def on_fired(self, number):  # 2-arg signal, 1-param slot
+            self.seen.append(number)
+
+    tab = Tab()
+    tab.emitter.fired.emit(7, "extra")
+
+    assert tab.seen == [7]  # excess positional truncated, no withArgs
+    assert show_info == []
+
+
+def test_cookbook_try_except_finally(show_info):
+    main_ident = threading.get_ident()
+    trace = []
+
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.status = None
+
+        @ui_task
+        async def read_files(self):
+            try:
+                count = await background(worker_boom, "read files")
+            except ValueError as e:  # caught at the await point, main thread
+                trace.append(("except", str(e), threading.get_ident()))
+                self.status = f"read failed: {e}"
+            else:
+                self.status = f"{count} files"
+            finally:  # always runs, on the main thread
+                trace.append(("finally", None, threading.get_ident()))
+
+    tab = Tab()
+    tab.read_files()
+
+    assert tab.status == "read failed: boom from worker"
+    assert [kind for kind, *_ in trace] == ["except", "finally"]
+    assert all(ident == main_ident for _, _, ident in trace)
+    assert show_info == []  # handled in-task: no framework dialog
+    assert not tab.manager.busy
+
+
+def test_cookbook_migrated_form(show_info):
+    class Tab(_Widget):
+        def __init__(self):
+            super().__init__()
+            self.result = None
+
+        @ui_task(mode="join")  # was @state_node(mode='x')
+        async def show_result(self, index):  # was def + withArgs=True
+            try:
+                # was: result = yield closure, "computing"
+                result = await background(
+                    lambda: index * 2, "computing")
+            except Exception:  # was: @show_result.except_node
+                self.result = "failed"
+                raise
+            else:
+                self.result = str(result)
+
+    tab = Tab()
+    events = []
+    tab.manager.busy_signal.connect(events.append)
+
+    tab.show_result(21)  # argument forwarded by signature
+
+    assert tab.result == "42"
+    assert events == [True, False]
+    assert not tab.manager.busy
+    assert show_info == []
