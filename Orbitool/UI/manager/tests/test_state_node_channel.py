@@ -8,6 +8,7 @@ from PyQt6 import QtWidgets
 from Orbitool import setting
 from ..manager import Manager
 from ..state_node import node
+from ..thread import MultiProcess
 
 # the package rebinds the `state_node` name to the node class, so the module
 # itself must be resolved through importlib, not through attribute lookup
@@ -22,6 +23,35 @@ class _Widget:
     def __init__(self):
         self.manager = Manager()
         self.manager.set_busy(False)
+
+
+class _Collect(MultiProcess):
+    @staticmethod
+    def func(input):
+        return input
+
+    @staticmethod
+    def read(file, length):
+        for i in range(length):
+            yield i
+
+    @staticmethod
+    def read_len(file, length) -> int:
+        return length
+
+    @staticmethod
+    def write(file, rets):
+        target = []
+        file["ret"] = target
+        cnt = 0
+        for ret in rets:
+            target.append(ret)
+            cnt += 1
+        return cnt
+
+    @staticmethod
+    def exception(file, **kwargs):
+        file.pop("ret", None)
 
 
 @pytest.fixture(autouse=True)
@@ -97,3 +127,24 @@ def test_worker_exception_logs_worker_traceback(show_info, caplog):
 
     assert show_info and "boom from worker" in show_info[0][0]
     assert not widget.manager.busy
+
+
+def test_yield_worker_instance_payload(show_info):
+    widget = _Widget()
+    msgs = []
+    widget.manager.msg.connect(msgs.append)
+    captured = []
+
+    @node
+    def task(widget):
+        file = {}
+        captured.append(
+            (yield _Collect(file, {"length": 3}), "multiprocess work"))
+        captured.append(file)
+
+    task.func(widget)
+
+    assert captured == [3, {"ret": [0, 1, 2]}]
+    assert msgs == ["multiprocess work"]
+    assert not widget.manager.busy
+    assert show_info == []

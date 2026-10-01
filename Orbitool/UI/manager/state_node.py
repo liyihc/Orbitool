@@ -2,12 +2,10 @@ import functools
 import logging
 from enum import Enum
 from typing import Any, Callable, Generator, overload
-from PyQt6 import QtCore
 
-from ... import setting
 from ..utils import showInfo, sleep
 from .manager import Manager
-from .thread import EXCEPTION, MultiProcess, Thread, threadtype
+from .task import Driver
 
 
 class NodeType(Enum):
@@ -79,47 +77,19 @@ class node:
                 ret = func(
                     selfWidget, *args, **kwargs) if self._withArgs else func(selfWidget)
                 if isinstance(ret, Generator):
-                    generator = ret
 
-                    def run_send(result):
-                        try:
-                            if result is not None:
-                                channel, payload = result[0], result[1]
-                                if channel == EXCEPTION:
-                                    raise payload
-                                result = payload
-                            to_be_finished = generator.send(result)
-
-                            if isinstance(to_be_finished, tuple):
-                                to_be_finished, msg = to_be_finished
-                            else:
-                                msg = "processing"
-
-                            manager.msg.emit(msg)
-
-                            if not isinstance(to_be_finished, QtCore.QThread):
-                                thread = Thread(to_be_finished)
-                            else:
-                                thread = to_be_finished
-                            thread.set_tqdmer(manager.tqdm)
-                            thread.finished.connect(run_send)
-                            manager.running_thread = thread
-                            if setting.debug.thread_block_gui:
-                                thread.run()
-                            else:
-                                thread.start()
-                        except StopIteration:
+                    def on_error(e):
+                        logger = logging.getLogger("Orbitool")
+                        logger.error(str(e), exc_info=e)
+                        showInfo(str(e))
+                        if (tmpfunc := self.except_node.func):
+                            tmpfunc(selfWidget)
+                        elif self._mode in _busy_reset:
                             manager.set_busy(False)
-                        except Exception as e:
-                            logger = logging.getLogger("Orbitool")
-                            logger.error(str(e), exc_info=e)
-                            showInfo(str(e))
-                            if (tmpfunc := self.except_node.func):
-                                tmpfunc(selfWidget)
-                            elif self._mode in _busy_reset:
-                                manager.set_busy(False)
 
-                    run_send(None)
+                    Driver(ret, manager=manager,
+                           on_done=lambda: manager.set_busy(False),
+                           on_error=on_error).start()
 
                 elif self._mode in _busy_reset:
                     manager.set_busy(False)
