@@ -1,4 +1,5 @@
 import logging
+import threading
 from collections import deque
 from enum import Enum
 from multiprocessing import Pool
@@ -15,6 +16,12 @@ from ..utils import sleep
 from . import manager
 
 logger = logging.getLogger("Orbitool")
+
+# finished-signal payload channel: (RESULT, value) or (EXCEPTION, exception).
+# Receivers dispatch on the tag, never on the payload's truthiness, so falsy
+# values (0 / empty tuple / None) round-trip untouched.
+RESULT = "result"
+EXCEPTION = "exception"
 
 
 class threadtype(Enum):
@@ -35,11 +42,10 @@ class Thread(QtCore.QThread):
     def run(self):
         try:
             result = self.func(*self.args, **self.kwargs)
-            self.result = result
-            self.finished.emit((result,))
+            self.result = (RESULT, result)
         except Exception as e:
-            self.result = e
-            self.finished.emit((e, ))
+            self.result = (EXCEPTION, e)
+        self.finished.emit(self.result)
 
     def set_tqdmer(self, tqdmer: manager.TQDMER):
         pass
@@ -68,10 +74,25 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
         self.aborted = False
         self.tqdm: manager.TQDMER = None
         self.result = None
+        self._emitted = False
+        self._rolled_back = False
+        self._emit_lock = threading.Lock()
 
     @final
     def finished_emit(self, t: tuple):
-        self.result = t
+        with self._emit_lock:
+            if self._emitted:
+                suppressed = t
+            else:
+                self._emitted = True
+                self.result = t
+                suppressed = None
+        if suppressed is not None:
+            if suppressed[0] == EXCEPTION:
+                exc = suppressed[1]
+                logger.error(
+                    "finished notification already sent, suppressed", exc_info=exc)
+            return
         self.finished.emit(t)
 
     @final
@@ -88,7 +109,13 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
             else:
                 self._run()
         except Exception as e:
-            self.finished_emit((e,))
+            self.finished_emit((EXCEPTION, e))
+        finally:
+            if self.aborted:
+                try:
+                    self._rollback()
+                except Exception as e:
+                    logger.error(str(e), exc_info=e)
 
     @final
     def _run(self):
@@ -132,7 +159,6 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
             def abort():
                 queue.put(None)
                 pool.terminate()
-                self.exception(file)
 
             def wait_to_ready(force: bool):
                 if len(results) == 0:
@@ -151,8 +177,7 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
                 while len(results) > 0 and results[0].ready():
                     ret = results.popleft().get()
                     if isinstance(ret, Exception):
-                        self.finished_emit(
-                            (ret, (self.func, self.file)))
+                        self.finished_emit((EXCEPTION, ret))
                         self.abort()
                         return
                     queue.put(ret)
@@ -176,7 +201,7 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
             queue.put(None)
 
         write_thread.wait()
-        self.finished_emit((write_thread.result,))
+        self.finished_emit(write_thread.result)
 
     @final
     def _single_run_memory(self):
@@ -184,16 +209,25 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
 
         def read_process():
             for i, data in enumerate(self.tqdm(self.read(file, **self.read_kwargs), "process")):
+                if self.aborted:
+                    return
                 yield self.process(i, self.func, data, self.func_kwargs)
         ret = self.write(file, read_process(), **self.write_kwargs)
-        self.finished_emit((ret,))
+        self.finished_emit((RESULT, ret))
 
     @final
     def abort(self, send=True):
-        if send:
-            self.finished.emit(
-                (RuntimeError("Aborted"), (self.func, self.file)))
         self.aborted = True
+        if send:
+            self.finished_emit(
+                (EXCEPTION, RuntimeError("Aborted")))
+
+    @final
+    def _rollback(self):
+        if self._rolled_back:
+            return
+        self._rolled_back = True
+        self.exception(self.file)
 
     @final
     @staticmethod

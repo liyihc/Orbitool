@@ -1,6 +1,7 @@
 from __future__ import annotations
 from contextlib import contextmanager
 
+import itertools
 import logging
 import weakref
 from datetime import datetime
@@ -55,7 +56,6 @@ class Manager(QObject):
         self.peak_float_wins: Dict[int, QMainWindow] = {}
 
         self.tqdm = TQDMER()
-        self.busy_signal.connect(self.tqdm.reinit)
 
         self.init_or_restored = MySignal()  # for exception catch
         self.save = MySignal()  # for exception catch
@@ -144,7 +144,7 @@ class TQDMER(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.progress_cnt = 0
+        self.progress_cnt = itertools.count()
 
     @overload
     def __call__(self, iter: Iterable[T], msg: str = "") -> TQDM[T]:
@@ -169,17 +169,12 @@ class TQDMER(QObject):
                     length = len(iter)
                 else:
                     length = 0
-        label = self.progress_cnt
+        label = next(self.progress_cnt)
         tqdm = TQDM((lambda percent, msg: self.tqdm_signal.emit(label, percent, msg)),
                     iter, length, msg)
         if immediate:
             tqdm.showMsg()
-        self.progress_cnt += 1
         return tqdm
-
-    def reinit(self, reinit: bool = True):
-        if reinit:
-            self.progress_cnt = 0
 
 
 def get_callable_weak_ref(handler, callback=None):

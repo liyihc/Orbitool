@@ -7,7 +7,7 @@ from PyQt6 import QtCore
 from ... import setting
 from ..utils import showInfo, sleep
 from .manager import Manager
-from .thread import MultiProcess, Thread, threadtype
+from .thread import EXCEPTION, MultiProcess, Thread, threadtype
 
 
 class NodeType(Enum):
@@ -83,11 +83,11 @@ class node:
 
                     def run_send(result):
                         try:
-                            if result:
-                                result = result[0]
-
-                                if isinstance(result, Exception):
-                                    raise result
+                            if result is not None:
+                                channel, payload = result[0], result[1]
+                                if channel == EXCEPTION:
+                                    raise payload
+                                result = payload
                             to_be_finished = generator.send(result)
 
                             if isinstance(to_be_finished, tuple):

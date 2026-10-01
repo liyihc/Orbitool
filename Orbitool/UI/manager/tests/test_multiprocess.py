@@ -4,6 +4,7 @@ from time import sleep
 
 from PyQt6 import QtWidgets, QtCore
 from .. import MultiProcess, Manager
+from ..thread import EXCEPTION, RESULT
 from Orbitool import setting
 
 
@@ -32,59 +33,137 @@ class p(MultiProcess):
         return cnt
 
     @staticmethod
-    def exception(file, args):
-        del file["ret"]
+    def exception(file, **kwargs):
+        file.pop("ret", None)
+
+
+class slow_p(p):
+    @staticmethod
+    def func(input):
+        sleep(0.01)
+        return input
+
+
+class abort_p(slow_p):
+    rollback_calls = 0
+
+    @staticmethod
+    def exception(file, **kwargs):
+        abort_p.rollback_calls += 1
+        file.pop("ret", None)
 
 
 # freeze_support()
 
 
-# def test_normal():
-#     app = QtWidgets.QApplication([])
-#     num = 20
-#     file = {}
-#     pp = p(file, {"length": 20})
-#     # pp.start()
-#     # pp.wait()
-#     pp.run()
-#     if isinstance(pp.result[0], Exception):
-#         raise pp.result[0]
+# a QApplication with no references gets destroyed mid-session; keep one alive
+app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
-#     assert file == {"ret": list(range(20))}
 
 def test_single():
-    # config.DEBUG = True
+    old = setting.debug.NO_MULTIPROCESS
     setting.debug.NO_MULTIPROCESS = True
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    num = 20
-    file = {}
-    pp = p(file, {"length": 20})
-    pp.start()
-    pp.wait()
-    # pp.run()
-    if isinstance(pp.result[0], Exception):
-        raise pp.result[0]
+    try:
+        file = {}
+        pp = p(file, {"length": 20})
+        pp.start()
+        pp.wait()
+        assert pp.result[0] == RESULT, pp.result
+        assert pp.result[1] == 20
+        assert file == {"ret": list(range(20))}
+    finally:
+        setting.debug.NO_MULTIPROCESS = old
 
-    assert file == {"ret": list(range(20))}
+
+def test_abort():
+    old = setting.debug.NO_MULTIPROCESS
+    setting.debug.NO_MULTIPROCESS = True
+    try:
+        abort_p.rollback_calls = 0
+        file = {}
+        pp = abort_p(file, {"length": 60})
+        notifications = []
+        pp.finished.connect(lambda t: notifications.append(t))
+
+        pp.start()
+        # 60 * 10ms floor keeps the run in flight for ~600ms, so aborting
+        # after a short pause deterministically lands mid-run
+        QtCore.QThread.msleep(50)
+        pp.abort()
+        pp.wait()
+
+        assert len(notifications) == 1, notifications
+        channel, payload = notifications[0]
+        assert channel == EXCEPTION and isinstance(payload, RuntimeError)
+        assert pp.aborted
+        assert pp.result[0] == EXCEPTION
+        assert abort_p.rollback_calls == 1
+        assert file == {}
+    finally:
+        setting.debug.NO_MULTIPROCESS = old
 
 
-# def test_abort():
-#     app = QtWidgets.QApplication([])
-#     num = 20
-#     file = {}
-#     pp = p(file, {"length": 20})
+def test_abort_sets_flag_before_notifying():
+    pp = p({}, {"length": 1})
+    seen = []
+    pp.finished.connect(lambda t: seen.append(pp.aborted))
+    pp.abort()
+    assert seen == [True]
 
-#     pp.start()
 
-#     loop = QtCore.QEventLoop()
-#     timer = QtCore.QTimer()
-#     timer.timeout.connect(loop.quit)
-#     timer.start(1)
-#     loop.exec()
-#     timer.stop()
+def test_completion_then_abort_notifies_once():
+    pp = p({}, {"length": 1})
+    notifications = []
+    pp.finished.connect(lambda t: notifications.append(t))
 
-#     pp.abort()
+    pp.finished_emit((RESULT, 7))
+    pp.abort()
 
-#     pp.wait()
+    assert notifications == [(RESULT, 7)]
+    assert pp.result == (RESULT, 7)
+    assert pp.aborted
 
-#     assert file == {}
+
+def test_abort_then_completion_notifies_once():
+    pp = p({}, {"length": 1})
+    notifications = []
+    pp.finished.connect(lambda t: notifications.append(t))
+
+    pp.abort()
+    pp.finished_emit((RESULT, 7))
+
+    assert len(notifications) == 1
+    channel, payload = notifications[0]
+    assert channel == EXCEPTION and isinstance(payload, RuntimeError)
+    assert pp.result == notifications[0]
+
+
+def test_abort_multiprocess_rollback():
+    old_mp = setting.debug.NO_MULTIPROCESS
+    old_cores = setting.general.multi_cores
+    setting.debug.NO_MULTIPROCESS = False
+    setting.general.multi_cores = 1
+    try:
+        abort_p.rollback_calls = 0
+        file = {}
+        pp = abort_p(file, {"length": 60})
+        notifications = []
+        pp.finished.connect(lambda t: notifications.append(t))
+
+        pp.start()
+        for _ in range(500):
+            if "ret" in file:
+                break
+            QtCore.QThread.msleep(10)
+        assert "ret" in file, "run did not reach the write stage"
+        pp.abort()
+        pp.wait()
+
+        assert len(notifications) == 1, notifications
+        channel, payload = notifications[0]
+        assert channel == EXCEPTION and isinstance(payload, RuntimeError)
+        assert abort_p.rollback_calls == 1
+        assert file == {}
+    finally:
+        setting.debug.NO_MULTIPROCESS = old_mp
+        setting.general.multi_cores = old_cores
