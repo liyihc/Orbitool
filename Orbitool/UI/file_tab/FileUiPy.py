@@ -8,7 +8,7 @@ from Orbitool.models.file import FileSpectrumInfo, Path, PathList
 from Orbitool.UI.utils.utils import TableUtils
 
 from .. import utils as UiUtils
-from ..manager import Manager, Thread, state_node
+from ..manager import Manager, Thread, ui_task, background
 from ..utils import DragHelper, set_header_sizes, showInfo
 from . import FileUi
 from .table_filter_helper import TableFilterHelper
@@ -71,8 +71,8 @@ class Widget(QtWidgets.QWidget):
         ui = self.ui
         self.info.ui_state.store_state(ui)
 
-    @state_node
-    def edit_period(self):
+    @ui_task
+    async def edit_period(self):
         from .CustomPeriodUiPy import Dialog
         ui = self.ui
         start_time = ui.startDateTimeEdit.dateTime().toPyDateTime()
@@ -85,63 +85,63 @@ class Widget(QtWidgets.QWidget):
         dialog.show_periods()
         dialog.exec()
 
-    @state_node
-    def addThermoFile(self):
-        files = UiUtils.openfiles(
-            "Select one or more files", "RAW files(*.RAW)")
-        pathlist = self.pathlist
+    @ui_task
+    async def addThermoFile(self):
+        try:
+            files = UiUtils.openfiles(
+                "Select one or more files", "RAW files(*.RAW)")
+            pathlist = self.pathlist
 
-        info = self.info
+            info = self.info
 
-        def func():
-            for f in files:
-                path = pathlist.addThermoFile(f)
-                for filter in path.getFileHandler().getUniqueFilters():
-                    info.add_filter(filter)
+            def func():
+                for f in files:
+                    path = pathlist.addThermoFile(f)
+                    for filter in path.getFileHandler().getUniqueFilters():
+                        info.add_filter(filter)
 
-            pathlist.sort()
-            self.filter_helper.refresh_filter_polarity()
-            return len(pathlist.paths)
+                pathlist.sort()
+                self.filter_helper.refresh_filter_polarity()
+                return len(pathlist.paths)
 
-        length = yield func, "read files"
+            length = await background(func, "read files")
 
-        self.showPaths()
-        self.filter_helper.show_filter()
+            self.showPaths()
+            self.filter_helper.show_filter()
+        except Exception:
+            self.showPaths()
+            raise
 
-    @addThermoFile.except_node
-    def addThermoFile(self):
-        self.showPaths()
+    @ui_task
+    async def addFolder(self):
+        try:
+            ret, folder = UiUtils.openfolder("Select one folder")
+            if not ret:
+                return
+            pathlist = self.pathlist
+            info = self.info
 
-    @state_node
-    def addFolder(self):
-        ret, folder = UiUtils.openfolder("Select one folder")
-        if not ret:
-            return
-        pathlist = self.pathlist
-        info = self.info
+            manager = self.manager
 
-        manager = self.manager
+            def func():
+                for path in manager.tqdm(utils.files.FolderTraveler(folder, ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
+                    p = pathlist.addThermoFile(path)
+                    for filter in p.getFileHandler().getUniqueFilters():
+                        info.add_filter(filter)
+                pathlist.sort()
+                self.filter_helper.refresh_filter_polarity()
 
-        def func():
-            for path in manager.tqdm(utils.files.FolderTraveler(folder, ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
-                p = pathlist.addThermoFile(path)
-                for filter in p.getFileHandler().getUniqueFilters():
-                    info.add_filter(filter)
-            pathlist.sort()
-            self.filter_helper.refresh_filter_polarity()
+            await background(func, "read folders")
 
-        yield func, "read folders"
+            self.showPaths()
+            self.filter_helper.show_filter()
+        except Exception:
+            self.showPaths()
+            self.filter_helper.show_filter()
+            raise
 
-        self.showPaths()
-        self.filter_helper.show_filter()
-
-    @addFolder.except_node
-    def addFolder(self):
-        self.showPaths()
-        self.filter_helper.show_filter()
-
-    @state_node(withArgs=True)
-    def showFileDetail(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def showFileDetail(self, item: QtWidgets.QTableWidgetItem):
         from .FileDetailUiPy import Dialog
         Dialog(self.manager, item.row()).exec()
 
@@ -153,8 +153,8 @@ class Widget(QtWidgets.QWidget):
     def tableDragMoveEvent(self, event: QtGui.QDragMoveEvent):
         event.accept()
 
-    @state_node(withArgs=True)
-    def tableDropEvent(self, event: QtGui.QDropEvent):
+    @ui_task
+    async def tableDropEvent(self, event: QtGui.QDropEvent):
         data = event.mimeData()
         paths = list(self.drag_helper.yield_file(data))
         info = self.info
@@ -171,30 +171,30 @@ class Widget(QtWidgets.QWidget):
                         info.add_filter(filter)
             pathlist.sort()
             self.filter_helper.refresh_filter_polarity()
-        yield func, "read files"
+        await background(func, "read files")
 
         self.showPaths()
         self.filter_helper.show_filter()
 
-    @state_node
-    def removePath(self):
-        indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
-        paths = self.pathlist.rmPath(indexes)
-        info = self.info
+    @ui_task
+    async def removePath(self):
+        try:
+            indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
+            paths = self.pathlist.rmPath(indexes)
+            info = self.info
 
-        def func():
-            for path in paths:
-                for f in path.getFileHandler().getUniqueFilters():
-                    info.rm_filter(f)
-        yield func
+            def func():
+                for path in paths:
+                    for f in path.getFileHandler().getUniqueFilters():
+                        info.rm_filter(f)
+            await background(func)
 
-        self.showPaths()
-        self.filter_helper.show_filter()
-
-    @removePath.except_node
-    def removePath(self):
-        self.showPaths()
-        self.filter_helper.show_filter()
+            self.showPaths()
+            self.filter_helper.show_filter()
+        except Exception:
+            self.showPaths()
+            self.filter_helper.show_filter()
+            raise
 
     def showPaths(self):
         ui = self.ui
@@ -218,8 +218,8 @@ class Widget(QtWidgets.QWidget):
             ui.startDateTimeEdit.setDateTime(time_start)
             ui.endDateTimeEdit.setDateTime(time_end)
 
-    @state_node
-    def adjust_time(self):
+    @ui_task
+    async def adjust_time(self):
         ui = self.ui
         slt = TableUtils.getSelectedRow(ui.tableWidget)
         paths = self.pathlist.subList(slt)
@@ -230,20 +230,20 @@ class Widget(QtWidgets.QWidget):
         ui.endDateTimeEdit.setDateTime(end)
 
 
-    @state_node
-    def processSelected(self):
+    @ui_task
+    async def processSelected(self):
         indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
         if len(indexes) == 0:
             return None
 
         paths = self.pathlist.subList(indexes)
-        self.info.spectrum_infos = yield self._process_paths(paths.paths), "get infomations from selected spectra"
+        self.info.spectrum_infos = await background(self._process_paths(paths.paths), "get infomations from selected spectra")
 
         self.callback.emit()
 
-    @state_node
-    def processAll(self):
-        self.info.spectrum_infos = yield self._process_paths(self.pathlist.paths), "get infomations from spectra"
+    @ui_task
+    async def processAll(self):
+        self.info.spectrum_infos = await background(self._process_paths(self.pathlist.paths), "get infomations from spectra")
 
         self.callback.emit()
 

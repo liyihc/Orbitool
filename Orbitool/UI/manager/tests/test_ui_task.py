@@ -184,6 +184,44 @@ def test_uncaught_worker_exception_logged_shown_and_busy_reset(
     assert not widget.manager.busy
 
 
+def test_recover_before_dialog_then_release_count(monkeypatch, caplog):
+    # the except_node -> try/except + raise rewrite contract (FileUiPy
+    # addThermoFile/addFolder/removePath): the recovery runs at the await
+    # point before the framework dialog, the dialog fires exactly once with
+    # str(e), and the default task's count is given back
+    widget = _Widget()
+    timeline = []
+    monkeypatch.setattr(
+        task_module, "showInfo",
+        lambda *args, **kwargs: timeline.append(("dialog", args)))
+    events = []
+    widget.manager.busy_signal.connect(events.append)
+
+    @ui_task
+    async def task(widget):
+        try:
+            await background(worker_boom, "work")
+        except Exception:
+            timeline.append(("recovered",))
+            raise
+
+    with caplog.at_level(logging.ERROR, logger="Orbitool"):
+        task.func(widget)
+
+    assert timeline == [
+        ("recovered",),
+        ("dialog", ("boom from worker",)),  # str(e), exactly once, after recovery
+    ]
+    assert events == [True, False]  # count taken, then given back by the fallback
+    assert not widget.manager.busy
+    with_traceback = [record for record in caplog.records if record.exc_info]
+    assert with_traceback, "worker exception must be logged with exc_info"
+    formatted = "".join(
+        traceback.format_exception(*with_traceback[-1].exc_info))
+    assert "worker_boom" in formatted
+    assert "boom from worker" in formatted
+
+
 def test_exception_in_task_body_logged_shown_and_busy_reset(
         show_info, caplog):
     widget = _Widget()
@@ -759,23 +797,32 @@ def test_cookbook_try_except_finally(show_info):
     assert not tab.manager.busy
 
 
-def test_cookbook_migrated_form(show_info):
+@pytest.mark.parametrize(
+    "worker_fails", [False, True], ids=["success", "worker_error"])
+def test_cookbook_migrated_form(worker_fails, show_info):
     class Tab(_Widget):
         def __init__(self):
             super().__init__()
             self.result = None
+            self.trace = []
 
         @ui_task(mode="join")  # was @state_node(mode='x')
         async def show_result(self, index):  # was def + withArgs=True
             try:
                 # was: result = yield closure, "computing"
                 result = await background(
-                    lambda: index * 2, "computing")
+                    lambda: self.heavy(index), "computing")
             except Exception:  # was: @show_result.except_node
+                self.trace.append("recovered")
                 self.result = "failed"
                 raise
             else:
                 self.result = str(result)
+
+        def heavy(self, index):
+            if worker_fails:
+                raise ValueError("computing failed")
+            return index * 2
 
     tab = Tab()
     events = []
@@ -783,7 +830,13 @@ def test_cookbook_migrated_form(show_info):
 
     tab.show_result(21)  # argument forwarded by signature
 
-    assert tab.result == "42"
-    assert events == [True, False]
+    if worker_fails:
+        assert tab.trace == ["recovered"]  # the except branch actually runs
+        assert tab.result == "failed"
+        assert show_info == [("computing failed",)]  # str(e) dialog, once
+    else:
+        assert tab.trace == []
+        assert tab.result == "42"
+        assert show_info == []
+    assert events == [True, False]  # busy given back in both variants
     assert not tab.manager.busy
-    assert show_info == []

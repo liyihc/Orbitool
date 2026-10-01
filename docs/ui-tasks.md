@@ -459,6 +459,7 @@ below are part of the contract:
 | Unbindable arguments → clear error through the fallback | `test_ui_task.py::test_unbindable_arguments_raise_clear_error_and_reset_busy` |
 | `try/except/else/finally` at the await point, on main | `test_ui_task.py::test_cookbook_try_except_finally` |
 | Uncaught → log with traceback → dialog → busy reset → chain stops | `test_ui_task.py::test_uncaught_worker_exception_logged_shown_and_busy_reset` |
+| Recovery runs before the dialog (`except` + `raise`), count released | `test_ui_task.py::test_recover_before_dialog_then_release_count` |
 | Letter modes rejected at decoration | `test_busy_modes.py::test_letter_mode_aliases_rejected_at_decoration` |
 | Migrated form (`join` + forwarded args + `await background`) | `test_ui_task.py::test_cookbook_migrated_form` |
 | Abort: flag first, exactly-once notification, rollback once | `test_multiprocess.py::test_abort_sets_flag_before_notifying`, `test_completion_then_abort_notifies_once`, `test_abort_then_completion_notifies_once`, `test_abort`, `test_abort_multiprocess_rollback` |

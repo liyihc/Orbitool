@@ -5,7 +5,7 @@ from Orbitool import logger
 
 from Orbitool.utils.readers import spectrum_filter
 
-from .. import Manager, state_node
+from .. import Manager, ui_task
 from ..utils import TableUtils
 
 TAG = "TableFilterHelper"
@@ -26,8 +26,8 @@ class TableFilterHelper:
     def info(self):
         return self.manager.workspace.info.file_tab
 
-    @state_node
-    def refresh_filter(self):
+    @ui_task
+    async def refresh_filter(self):
         info = self.info
         file_filters = info.getCastedFilesSpectrumFilters()
         file_filters.clear()
@@ -71,8 +71,8 @@ class TableFilterHelper:
                 row += 1
         table.resizeColumnsToContents()
 
-    @state_node(withArgs=True, mode="e")
-    def edit_filter(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task(mode="light")
+    async def edit_filter(self, item: QtWidgets.QTableWidgetItem):
         table = self.table
         file_filter = self.info.getCastedFilesSpectrumFilters()
         use_filter = self.info.getCastedUsedSpectrumFilters()
@@ -128,8 +128,8 @@ class TableFilterHelper:
         else:
             widget.focusOutEvent = self.text_changed
 
-    @state_node(mode='e')
-    def text_changed(self):
+    @ui_task(mode="light")
+    async def text_changed(self):
         if self.current_previous_pair is None:
             return
         table = self.table
@@ -186,8 +186,8 @@ class TableFilterHelper:
                     use_filter[key] = current
         self.show_filter()
 
-    @state_node
-    def add_filter(self):
+    @ui_task
+    async def add_filter(self):
         file_filter = self.info.getCastedFilesSpectrumFilters()
         use_filter = self.info.getCastedUsedSpectrumFilters()
         stats_filter = self.info.getCastedScanstatsFilters()
@@ -204,8 +204,8 @@ class TableFilterHelper:
 
         self.show_filter()
 
-    @state_node
-    def del_filter(self):
+    @ui_task
+    async def del_filter(self):
         table = self.table
         slt = TableUtils.getSelectedRow(table)
         use_filter = self.info.getCastedUsedSpectrumFilters()

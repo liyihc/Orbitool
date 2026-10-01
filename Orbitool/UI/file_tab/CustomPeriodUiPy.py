@@ -15,7 +15,7 @@ from Orbitool.models.file import PeriodItem, generate_periods, generate_num_peri
 
 from .CustomPeriodUi import Ui_Dialog
 from .utils import str2timedelta, timedelta2str
-from ..manager import state_node
+from ..manager import ui_task, background
 from ..utils import openfile, savefile
 from ..component import Plot
 
@@ -88,8 +88,8 @@ class Dialog(QtWidgets.QDialog):
 
         self.plot_periods()
 
-    @state_node(mode="e")
-    def plot_periods(self):
+    @ui_task(mode="light")
+    async def plot_periods(self):
         ax = self.plot.ax
         ax.cla()
         ax.axis(False)
@@ -181,16 +181,16 @@ class Dialog(QtWidgets.QDialog):
 
         self.plot.canvas.draw()
 
-    @state_node(mode="e")
-    def refresh_plot(self):
+    @ui_task(mode="light")
+    async def refresh_plot(self):
         left = self.plot_left + self.ui.plotPositionHorizontalSlider.value() / 50 * \
             self.plot_ref_length
         right = left + self.plot_ref_length / self.ui.plotFactorDoubleSpinBox.value()
         self.plot.ax.set_xlim(left, right)
         self.plot.canvas.draw()
 
-    @state_node(mode="e")
-    def generate_num_periods(self):
+    @ui_task(mode="light")
+    async def generate_num_periods(self):
         ui = self.ui
         if not self.paths:
             return
@@ -208,14 +208,14 @@ class Dialog(QtWidgets.QDialog):
                 (p.getFileHandler() for p in self.paths), tr)
             return [PeriodItem(start_num=a, stop_num=b) for a, b in generate_num_periods(
                 start_scan_num, stop_scan_num, N)]
-        periods = yield update_scan_num, "update scan num"
+        periods = await background(update_scan_num, "update scan num")
 
         self.periods = periods
 
         self.show_periods()
 
-    @state_node(mode="e")
-    def generate_time_periods(self):
+    @ui_task(mode="light")
+    async def generate_time_periods(self):
         ui = self.ui
         self.periods = [
             PeriodItem(start_time=s, end_time=e) for s, e in generate_periods(
@@ -236,8 +236,8 @@ class Dialog(QtWidgets.QDialog):
             return int(s) * t
         return str2timedelta(s) * t
 
-    @state_node(mode="e")
-    def modify_start_points(self):
+    @ui_task(mode="light")
+    async def modify_start_points(self):
         delta = self.get_modify_delta()
         period: PeriodItem
         last_time: PeriodItem = None
@@ -261,8 +261,8 @@ class Dialog(QtWidgets.QDialog):
         self.periods = new_periods
         self.show_periods()
 
-    @state_node(mode="e")
-    def modify_end_points(self):
+    @ui_task(mode="light")
+    async def modify_end_points(self):
         delta = self.get_modify_delta()
         period: PeriodItem
         last_time: PeriodItem = None
@@ -284,8 +284,8 @@ class Dialog(QtWidgets.QDialog):
         self.periods = new_periods
         self.show_periods()
 
-    @state_node(mode="e")
-    def import_periods(self):
+    @ui_task(mode="light")
+    async def import_periods(self):
         success, file = openfile(
             "Select one period file", "CSV files(*.csv)")
         if not success:
@@ -305,11 +305,11 @@ class Dialog(QtWidgets.QDialog):
                         item = PeriodItem(start_num=int(row[2]), stop_num=int(row[3]))
                     ret.append(item)
             return ret
-        self.periods = yield func, "Read periods"
+        self.periods = await background(func, "Read periods")
         self.show_periods()
 
-    @state_node(mode="e")
-    def export_periods(self):
+    @ui_task(mode="light")
+    async def export_periods(self):
         success, file = savefile("Save to", "CSV files(*.csv)")
         if not success:
             return
@@ -328,7 +328,7 @@ class Dialog(QtWidgets.QDialog):
                     else:
                         writer.writerow(("", "", p.start_num, p.stop_num))
 
-        yield func, "exporting periods"
+        await background(func, "exporting periods")
 
 
 class TableEditDelegate(QtWidgets.QItemDelegate):
@@ -345,7 +345,7 @@ class TableEditDelegate(QtWidgets.QItemDelegate):
     def periods(self):
         return self.dialog_ref().periods
 
-    # @state_node(withArgs=True, mode="e")
+    # @ui_task(mode="light")
     def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QtCore.QModelIndex) -> QWidget:
         periods = self.periods
         period = periods[index.row()]
@@ -374,7 +374,7 @@ class TableEditDelegate(QtWidgets.QItemDelegate):
                     de.setMaximumDateTime(periods[index.row() + 1].start_time)
         return de
 
-    # @state_node(withArgs=True, mode="e")
+    # @ui_task(mode="light")
     def setEditorData(self, editor: Union[QtWidgets.QSpinBox, QtWidgets.QDateTimeEdit], index: QtCore.QModelIndex) -> None:
         period = self.periods[index.row()]
         if period.start_num >= 0:
@@ -390,7 +390,7 @@ class TableEditDelegate(QtWidgets.QItemDelegate):
                 case 1:
                     editor.setDateTime(period.end_time)
 
-    # @state_node(withArgs=True, mode="e")
+    # @ui_task(mode="light")
     def setModelData(self, editor: Union[QtWidgets.QSpinBox, QtWidgets.QDateTimeEdit], model: QtCore.QAbstractItemModel, index: QtCore.QModelIndex) -> None:
         period = self.periods[index.row()]
         if period.start_num >= 0:
