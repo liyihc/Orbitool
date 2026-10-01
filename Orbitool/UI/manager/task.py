@@ -12,6 +12,8 @@ from .thread import EXCEPTION, Thread
 
 logger = logging.getLogger("Orbitool")
 
+_TASK_MODES = ("default", "join", "light")
+
 
 class Step:
     """
@@ -133,15 +135,23 @@ class ui_task:
     """
     Decorator for async UI tasks: `@ui_task` on an `async def` method,
     worker boundaries written as `await background(...)`. The wrapper
-    enforces the mode's busy policy (default mode: busy -> refuse with a
-    prompt, idle -> take busy, release on finish or error) and drives the
-    coroutine through the shared Driver. Uncaught task/worker exceptions
-    are logged with traceback, shown via one uniform dialog, and release
-    busy before the chain terminates.
+    enforces the mode's busy policy and drives the coroutine through the
+    shared Driver. `mode` accepts exactly three words (no letter aliases):
+
+    - default: hold busy, refuse to start while busy ("Wait for process");
+    - join: hold busy, start even while busy (pipeline relay);
+    - light: never touch busy, error fallback only.
+
+    default/join tasks follow the counting rule: Manager.begin_task at
+    start (+1), Manager.end_task at finish (+0/-1), so busy stays until
+    the last holder finishes — each task only returns the count it took.
+    Uncaught task/worker exceptions are logged with traceback, shown via
+    one uniform dialog, and release the task's count (light: nothing)
+    before the chain terminates.
     """
     def __init__(self, func: Optional[Callable] = None, *,
                  mode: str = "default") -> None:
-        if mode not in ("default",):
+        if mode not in _TASK_MODES:
             raise ValueError(f"unsupported ui_task mode: {mode!r}")
         if func is not None and not callable(func):
             raise TypeError(
@@ -159,19 +169,31 @@ class ui_task:
         @functools.wraps(func)
         def wrapper(selfWidget, *args, **kwargs):
             manager: Manager = selfWidget.manager
-            if manager.busy:
+            mode = self._mode
+            counts = mode != "light"
+            if mode == "default" and manager.busy:
                 showInfo("Wait for process", 'busy')
                 return
-            manager.set_busy(True)
-            sleep(.05)
+            if counts:
+                was_idle = not manager.busy
+                manager.begin_task()
+                if was_idle:
+                    sleep(.05)
 
             def on_done():
-                manager.set_busy(False)
+                if counts:
+                    manager.end_task()
 
             def on_error(e: BaseException):
                 logger.error(str(e), exc_info=e)
-                showInfo(str(e))
-                manager.set_busy(False)
+                try:
+                    showInfo(str(e))
+                except Exception:
+                    logger.error(
+                        "failed to show the task error dialog", exc_info=True)
+                finally:
+                    if counts:
+                        manager.end_task()
 
             try:
                 driver = Driver(

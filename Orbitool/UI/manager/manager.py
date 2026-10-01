@@ -1,5 +1,4 @@
 from __future__ import annotations
-from contextlib import contextmanager
 
 import itertools
 import logging
@@ -16,6 +15,8 @@ from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QTableWidget
 
 from Orbitool.models.workspace import WorkSpace
+
+logger = logging.getLogger("Orbitool")
 
 
 class BindData:
@@ -50,6 +51,7 @@ class Manager(QObject):
         self.running_thread: QThread = None
         self.workspace: WorkSpace = None
         self._busy: bool = True
+        self._busy_count: int = 0
 
         self.formulas_result_win: QMainWindow = None
         self.calibration_detail_win: QMainWindow = None
@@ -65,24 +67,45 @@ class Manager(QObject):
         self.getters = Values()
 
     def set_busy(self, busy: bool):
+        """
+        Legacy flag setter (state_node path): sets/clears the flag only,
+        the ui_task count stays untouched. busy_signal fires only when
+        the effective busy (flag or count > 0) actually changes.
+        """
         if busy ^ self._busy:
+            was_busy = self.busy
             self._busy = busy
-            self.busy_signal.emit(busy)
+            if was_busy != self.busy:
+                self.busy_signal.emit(self.busy)
+
+    def begin_task(self) -> None:
+        """
+        ui_task start hook: hold one busy count. busy is the legacy flag
+        or count > 0, so the signal fires only on the idle -> busy edge.
+        """
+        was_busy = self.busy
+        self._busy_count += 1
+        if not was_busy:
+            self.busy_signal.emit(True)
+
+    def end_task(self) -> None:
+        """
+        ui_task finish hook (success or failure): give back this task's
+        count; busy only clears, and the signal fires only on the
+        busy -> idle edge, when no legacy flag and no count remain.
+        """
+        was_busy = self.busy
+        if self._busy_count > 0:
+            self._busy_count -= 1
+        else:
+            logger.warning(
+                "end_task called without a matching begin_task")
+        if was_busy and not self.busy:
+            self.busy_signal.emit(False)
 
     @property
     def busy(self):
-        return self._busy
-
-    @contextmanager
-    def not_check(self):
-        busy = self.busy
-        self.set_busy(False)
-        try:
-            yield
-        except:
-            raise
-        finally:
-            self.set_busy(busy)
+        return self._busy or self._busy_count > 0
 
 
 T = TypeVar("T")
