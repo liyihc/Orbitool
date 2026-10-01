@@ -30,6 +30,12 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 - `uv run --group dev pytest` — run the test suite (paths are listed in `pytest.ini`)
 - `uv run python Main.py [--debug] [--no_multiprocess] [--to_step file|noise|peak-fit|calibration]` —
   launch the app; exceptions are appended to `log.txt` in the repo root
+- Ad-hoc scripts that `import Orbitool` must run with the repo root on
+  `sys.path`: `python` adds the *script's* own directory, not the repo root, so
+  `uv run python C:\elsewhere\probe.py` raises `ModuleNotFoundError`. Keep the
+  script at the repo root, or set `PYTHONPATH=.` just for that command
+  (PowerShell: `$env:PYTHONPATH="."; uv run python ...`). `uv run pytest` needs
+  none of this — `pytest.ini`'s rootdir handles it.
 
 ## UI tests
 
