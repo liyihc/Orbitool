@@ -227,7 +227,7 @@ class Widget(QtWidgets.QWidget):
         formula_params = noise_setting.noise_formulas
         for index, (i, s, d) in enumerate(zip(ind, slt, mass_point_deltas)):
             p = formula_params[index]
-            p.selected = p.useable = s
+            p.selected = p.useable = bool(s)
             if s:
                 p.param = params[i]
             p.delta = d
