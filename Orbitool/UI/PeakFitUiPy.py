@@ -18,7 +18,7 @@ from Orbitool.utils import binary_search
 
 from . import PeakFitUi
 from .component import Plot
-from .manager import Manager, MultiProcess, state_node
+from .manager import Manager, MultiProcess, ui_task, background
 
 
 class FitMethod(str, Enum):
@@ -128,8 +128,8 @@ class Widget(QtWidgets.QWidget):
     def info(self):
         return self.manager.workspace.info.peak_fit_tab
 
-    @state_node
-    def showSelect(self):
+    @ui_task
+    async def showSelect(self):
         workspace = self.manager.workspace
         selected_index = self.manager.getters.spectra_list_selected_index.get()
 
@@ -139,12 +139,12 @@ class Widget(QtWidgets.QWidget):
                 spectrum.mz, spectrum.intensity)
             return spectrum, raw_peaks
 
-        spectrum, raw_peaks = yield read, "read spectrum"
+        spectrum, raw_peaks = await background(read, "read spectrum")
         raw_peaks: List[Peak]
 
         setting.set_global_val("multi-process-tmp-times", 20)
-        raw_split_num, original_indexes, peaks = yield SplitPeaks(raw_peaks, func_kwargs={
-            "func": workspace.info.peak_shape_tab.func}), "fit use peak shape func"
+        raw_split_num, original_indexes, peaks = await background(SplitPeaks(raw_peaks, func_kwargs={
+            "func": workspace.info.peak_shape_tab.func}), "fit use peak shape func")
 
         peaks = cast(List[FittedPeak], peaks)
         manager = self.manager
@@ -165,7 +165,7 @@ class Widget(QtWidgets.QWidget):
 
             return mz, residual
 
-        mz, residual = yield formula_and_residual, "calc formula"
+        mz, residual = await background(formula_and_residual, "calc formula")
 
         info = self.info
         info.spectrum, info.raw_peaks = spectrum, raw_peaks
@@ -213,8 +213,8 @@ class Widget(QtWidgets.QWidget):
 
         plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def ylog_toggle(self, is_log):
+    @ui_task
+    async def ylog_toggle(self, is_log):
         ax = self.plot.ax
         ax.set_yscale('log' if is_log else 'linear')
         if not is_log:
@@ -223,15 +223,15 @@ class Widget(QtWidgets.QWidget):
         self.rescale()
         self.plot.canvas.draw()
 
-    @state_node(mode='n', withArgs=True)
-    def moveRight(self, step):
+    @ui_task(mode="light")
+    async def moveRight(self, step):
         plot = self.plot
         x_min, x_max = plot.ax.get_xlim()
         plot.ax.set_xlim(x_min + step, x_max + step)
         self.plot.canvas.draw()
 
-    @state_node(mode='n', withArgs=True)
-    def y_times(self, times):
+    @ui_task(mode="light")
+    async def y_times(self, times):
         plot = self.plot
         y_min, y_max = plot.ax.get_ylim()
         y_max *= times
@@ -240,8 +240,8 @@ class Widget(QtWidgets.QWidget):
         plot.ax.set_ylim(y_min, y_max)
         plot.canvas.draw()
 
-    @state_node
-    def rescale_clicked(self):
+    @ui_task
+    async def rescale_clicked(self):
         self.rescale()
         self.plot.canvas.draw()
 
@@ -271,8 +271,8 @@ class Widget(QtWidgets.QWidget):
         plot.ax.set_xlim(x_min, x_max)
         plot.ax.set_ylim(y_min, y_max)
 
-    @state_node
-    def scale_spectrum(self):
+    @ui_task
+    async def scale_spectrum(self):
         info = self.info
         if info.spectrum is None:
             return
@@ -298,8 +298,8 @@ class Widget(QtWidgets.QWidget):
 
         self.plot_moved()
 
-    @state_node(mode='n')
-    def timer_timeout(self):
+    @ui_task(mode="light")
+    async def timer_timeout(self):
         ax = self.plot.ax
         now_lim = (ax.get_xlim(), ax.get_ylim())
         if self.plot_lim is not None and abs(np.array(now_lim) / np.array(self.plot_lim) - 1).max() < 1e-3:
@@ -364,24 +364,24 @@ class Widget(QtWidgets.QWidget):
                 break
         self.plot.canvas.draw()
 
-    @state_node
-    def filterClear(self):
+    @ui_task
+    async def filterClear(self):
         info = self.info
         info.shown_indexes = list(range(len(info.peaks)))
         self.manager.signals.peak_list_show.emit()
 
-    @state_node
-    def filterSelected(self):
+    @ui_task
+    async def filterSelected(self):
         self.filter_selected.emit(True)
         self.manager.signals.peak_list_show.emit()
 
-    @state_node
-    def filterUnselected(self):
+    @ui_task
+    async def filterUnselected(self):
         self.filter_selected.emit(False)
         self.manager.signals.peak_list_show.emit()
 
-    @state_node(withArgs=True)
-    def filterGeneral(self, filter: Callable[[FittedPeak], bool]):
+    @ui_task
+    async def filterGeneral(self, filter: Callable[[FittedPeak], bool]):
         self._filter_general(filter)
 
     def _filter_general(self, filter: Callable[[FittedPeak], bool]):
@@ -391,8 +391,8 @@ class Widget(QtWidgets.QWidget):
             index for index in info.shown_indexes if filter(peaks[index])]
         self.manager.signals.peak_list_show.emit()
 
-    @state_node(withArgs=True)
-    def filter_tag(self, y: bool):
+    @ui_task
+    async def filter_tag(self, y: bool):
         tag = self.ui.filterTagComboBox.currentText()
         tag: PeakTags = getattr(PeakTags, tag)
         if y:
@@ -400,41 +400,41 @@ class Widget(QtWidgets.QWidget):
         else:
             self._filter_general(lambda fp: tag.value not in fp.tags)
 
-    @state_node
-    def filter_intensity_max(self):
+    @ui_task
+    async def filter_intensity_max(self):
         value = self.ui.filterIntensityMaxDoubleSpinBox.value()
         self._filter_general(lambda fp: fp.peak_intensity < value)
 
-    @state_node
-    def filter_intensity_min(self):
+    @ui_task
+    async def filter_intensity_min(self):
         value = self.ui.filterIntensityMinDoubleSpinBox.value()
         self._filter_general(lambda fp: fp.peak_intensity > value)
 
-    @state_node
-    def filter_mass_defect(self):
+    @ui_task
+    async def filter_mass_defect(self):
         mi = self.ui.filterMassDefectMinDoubleSpinBox.value()
         ma = self.ui.filterMassDefectMaxDoubleSpinBox.value()
         self._filter_general(
             lambda fp: mi < fp.peak_position - round(fp.peak_position) < ma)
 
-    @state_node
-    def filter_group_y(self):
+    @ui_task
+    async def filter_group_y(self):
         group = self.ui.filterGroupLineEdit.text()
         group = Formula(group)
         self._filter_general(lambda fp: any(group in f for f in fp.formulas))
 
-    @state_node
-    def filter_group_n(self):
+    @ui_task
+    async def filter_group_n(self):
         group = self.ui.filterGroupLineEdit.text()
         group = Formula(group)
         self._filter_general(lambda fp: any(
             group not in f for f in fp.formulas))
 
-    @state_node(withArgs=True)
-    def generalAction(self, action: Callable[[FittedPeak], None], msg: str):
-        yield from self._general_action(action, msg)
+    @ui_task
+    async def generalAction(self, action: Callable[[FittedPeak], None], msg: str):
+        await self._general_action(action, msg)
 
-    def _general_action(self, action: Callable[[FittedPeak], None], msg: str):
+    async def _general_action(self, action: Callable[[FittedPeak], None], msg: str):
         info = self.info
 
         peaks = info.peaks
@@ -447,16 +447,16 @@ class Widget(QtWidgets.QWidget):
             for index in manager.tqdm(indexes):
                 action(peaks[index])
 
-        yield func, msg
+        await background(func, msg)
 
         self.manager.signals.peak_list_show.emit()
 
-    @state_node(mode='n', withArgs=True)
-    def step_accord_toggled(self, value: bool):
+    @ui_task(mode="light")
+    async def step_accord_toggled(self, value: bool):
         self.ui.stepRtolDoubleSpinBox.setEnabled(value)
 
-    @state_node
-    def do_step(self):
+    @ui_task
+    async def do_step(self):
         ui = self.ui
         group_p = Formula(ui.stepPlusLineEdit.text())
         group_m = Formula(ui.stepMinusLineEdit.text())
@@ -503,12 +503,12 @@ class Widget(QtWidgets.QWidget):
                                 rets.append(index)
                                 break
                 return rets
-        rets: List[int] = yield func, "step"
+        rets: List[int] = await background(func, "step")
         info.shown_indexes = rets
         self.manager.signals.peak_list_show.emit()
 
-    @state_node
-    def replot_within_peaks(self):
+    @ui_task
+    async def replot_within_peaks(self):
         info = self.info
         raw_peaks = info.raw_peaks
         o_peaks = info.peaks
@@ -529,19 +529,19 @@ class Widget(QtWidgets.QWidget):
 
             intensity = np.concatenate([peak.intensity for peak in r_peaks])
             return mz, intensity, residual
-        info.shown_mz, info.shown_intensity, info.shown_residual = yield residual, "calc residual"
+        info.shown_mz, info.shown_intensity, info.shown_residual = await background(residual, "calc residual")
 
         self.plot_peaks()
 
-    @state_node
-    def fit(self):
+    @ui_task
+    async def fit(self):
         method: FitMethod = self.ui.fitComboBox.currentData()
         if method == FitMethod.calc:
-            yield from self.fit_formula()
+            await self.fit_formula()
         elif method == FitMethod.mass_list:
-            yield from self.fit_mass_list()
+            await self.fit_mass_list()
 
-    def fit_formula(self):
+    async def fit_formula(self):
         info = self.info
 
         rtol = self.manager.workspace.info.formula_docker.calc_gen.rtol
@@ -566,11 +566,11 @@ class Widget(QtWidgets.QWidget):
                     peak = peaks[index]
                     peak.formulas = correct_formula(peak, peaks, rtol)
 
-        yield func, "fit use calc"
+        await background(func, "fit use calc")
 
         self.manager.signals.peak_list_show.emit()
 
-    def fit_mass_list(self):
+    async def fit_mass_list(self):
         rtol = self.manager.workspace.info.masslist_docker.rtol
         masslist = self.manager.workspace.info.masslist_docker.masslist
 
@@ -578,32 +578,32 @@ class Widget(QtWidgets.QWidget):
             fp.formulas = MassListHelper.fitUseMassList(
                 fp.peak_position, masslist, rtol)
 
-        yield from self._general_action(proc, "fit use mass list")
+        await self._general_action(proc, "fit use mass list")
 
-    @state_node
-    def add_tag(self):
+    @ui_task
+    async def add_tag(self):
         tag = self.ui.addTagComboBox.currentText()
         tag: PeakTags = getattr(PeakTags, tag)
 
         def proc(fp: FittedPeak):
             fp.tags = tag.value
-        yield from self._general_action(proc, "add tag")
+        await self._general_action(proc, "add tag")
 
-    @state_node
-    def addToMassList(self):
+    @ui_task
+    async def addToMassList(self):
         masslist = self.manager.workspace.info.masslist_docker.masslist
         rtol = self.manager.workspace.info.masslist_docker.rtol
 
-        yield from self._general_action(lambda fp: MassListHelper.addMassTo(
+        await self._general_action(lambda fp: MassListHelper.addMassTo(
             masslist, MassListItem(position=fp.peak_position, formulas=fp.formulas), rtol=rtol), "add to mass list")
 
         self.show_masslist.emit()
 
-    @state_node
-    def remove_tag(self):
+    @ui_task
+    async def remove_tag(self):
         def proc(fp: FittedPeak):
             fp.tags = ""
-        yield from self._general_action(proc, "add tag")
+        await self._general_action(proc, "add tag")
 
 
 class SplitPeaks(MultiProcess):
