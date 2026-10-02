@@ -15,7 +15,7 @@ from . import (CalibrationUiPy, file_tab, formulas, MainUi, MassDefectUiPy,
                PeakShapeUiPy, SpectraListUiPy, SpectrumUiPy, TimeseriesesUiPy,
                TimeseriesUiPy)
 from . import utils as UiUtils
-from .manager import Manager, MultiProcess, state_node, ui_task
+from .manager import Manager, MultiProcess, ui_task
 
 
 class Window(QtWidgets.QMainWindow):
@@ -156,14 +156,14 @@ class Window(QtWidgets.QMainWindow):
         self.workspace.close()
         e.accept()
 
-    @state_node
-    def setting_dialog(self):
+    @ui_task
+    async def setting_dialog(self):
         from .setting import Dialog as SettingDialog
         dialog = SettingDialog()
         dialog.exec()
 
-    @state_node
-    def load(self):
+    @ui_task
+    async def load(self):
         ret, f = UiUtils.openfile(
             "Load workspace", "Orbitool Workspace file(*.Orbitool)")
         if not ret:
@@ -191,13 +191,13 @@ class Window(QtWidgets.QMainWindow):
         self.manager.workspace = workspace
         self.manager.init_or_restored.emit()
 
-    @state_node
-    def save(self):
+    @ui_task
+    async def save(self):
         self.manager.save.emit()
         self.manager.workspace.save()
 
-    @state_node
-    def save_as(self):
+    @ui_task
+    async def save_as(self):
         ret, f = UiUtils.savefile(
             "Save workspace", "Orbitool Workspace file(*.Orbitool)")
         if not ret:
@@ -208,8 +208,8 @@ class Window(QtWidgets.QMainWindow):
             UiUtils.showInfo("\n".join(h5_brokens), "below data was broken")
         self.manager.workspace = WorkSpace(f)
 
-    @state_node
-    def loadConfig(self):
+    @ui_task
+    async def loadConfig(self):
         ret, f = UiUtils.openfile(
             "Load config from workspace file", "Orbitool Workspace file(*.Orbitool)")
         if not ret:
@@ -218,8 +218,8 @@ class Window(QtWidgets.QMainWindow):
         self.manager.workspace.load_config_from_file(f)
         self.manager.init_or_restored.emit()
 
-    @state_node
-    def saveConfig(self):
+    @ui_task
+    async def saveConfig(self):
         ret, f = UiUtils.savefile(
             "Save config", "Orbitool Workspace file(*.Orbitool)")
         if not ret:
@@ -244,16 +244,16 @@ class Window(QtWidgets.QMainWindow):
         bar.setValue(percent)
         bar.setFormat(msg)
 
-    @state_node(mode='x')
-    def file_tab_finish(self):
+    @ui_task(mode="join")
+    async def file_tab_finish(self):
         self.spectraList.ui.comboBox.setCurrentIndex(-1)
         self.spectraList.ui.comboBox.setCurrentIndex(0)
         self.spectraListDw.show()
         self.spectraListDw.raise_()
         self.ui.tabWidget.setCurrentWidget(self.noiseTab)
 
-    @state_node(mode='x', withArgs=True)
-    def show_spectrum(self, spectrum):
+    @ui_task(mode="join")
+    async def show_spectrum(self, spectrum):
         self.spectrum.show_spectrum(spectrum)
         self.spectrumDw.show()
         self.spectrumDw.raise_()
@@ -264,12 +264,12 @@ class Window(QtWidgets.QMainWindow):
         self.ui.tabWidget.setCurrentWidget(self.peakShapeTab)
         await self.peakShapeTab.showPeak()
 
-    @state_node(mode='x')
-    def peak_shape_tab_finish(self):
+    @ui_task(mode="join")
+    async def peak_shape_tab_finish(self):
         self.ui.tabWidget.setCurrentWidget(self.calibrationTab)
 
-    @state_node(mode='x')
-    def calibration_finish(self):
+    @ui_task(mode="join")
+    async def calibration_finish(self):
         self.ui.tabWidget.setCurrentWidget(self.peakFitTab)
         self.spectraList.ui.comboBox.setCurrentIndex(1)
         self.spectraListDw.raise_()
