@@ -44,6 +44,7 @@ try:
 
         import sys
         app = QtWidgets.QApplication(sys.argv)
+        app.styleHints().setColorScheme(QtCore.Qt.ColorScheme.Light)
         style = QtWidgets.QStyleFactory.create('Fusion')
         app.setStyle(style)
 
