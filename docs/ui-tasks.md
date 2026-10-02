@@ -3,9 +3,9 @@
 How to write a tab operation that runs work off the UI thread, without reading
 the framework source (`Orbitool/UI/manager/task.py`). It covers the thread
 model, the three `mode` words, the error/abort contracts, and the "never touch
-widgets from a worker" rule. Import `ui_task`/`background` from `.manager` (or
-`..manager` in a subpackage). A task is an ordinary method — call it
-(`self.denoise()`) or `connect` it to a signal; there is no `.func` ceremony.
+widgets from a worker" rule. Import `ui_task`/`background`/`progress` from
+`.manager` (or `..manager` in a subpackage). A task is an ordinary method — call
+it (`self.denoise()`) or `connect` it to a signal; there is no `.func` ceremony.
 
 ## Thread model
 
@@ -93,9 +93,20 @@ async def denoise(self):
 
 `background(work, msg="processing")` accepts a callable **or** an already
 constructed `Thread`/`MultiProcess` instance; anything else raises `TypeError`.
-The step's `msg` is shown by the framework via `manager.msg`; inside a longer
-worker you can also drive `manager.tqdm(...)` yourself to report progress (it
-only emits a signal, so it is safe off the main thread).
+The step's `msg` is shown by the framework via `manager.msg`. Inside a worker,
+report progress through the module-level `progress.tqdm(...)` accessor:
+
+```python
+def work():
+    for peak in progress.tqdm(peaks, msg="calc formulas"):
+        peak.formulas = calc_formulas(peak)
+```
+
+`progress.tqdm(...)` resolves to the running worker's reporter (installed by the
+driver), so the worker needs no reference to `Manager`; it only emits a signal,
+so it is safe off the main thread. With no worker context (main-thread code) it
+is a harmless no-op — it never raises. The `manager.tqdm(...)` object still
+exists as the resident implementation the accessor resolves to.
 
 ### Multi-process worker instance
 
@@ -133,7 +144,9 @@ async def analyze(self):
 ```
 
 The framework reports the subclass's `read`/`write` progress automatically; the
-step `msg` is the progress message.
+step `msg` is the progress message. `progress.tqdm(...)` is only meaningful on
+the worker thread — a subclass's `func` runs in the process pool, so per-item
+progress there stays with the framework's automatic `read`/`write` reporting.
 
 ### `join`: pipeline relay
 
@@ -268,8 +281,8 @@ rows = await background(lambda: count_rows(folder), "counting")  # pure computat
 self.table.setRowCount(rows)               # main thread: touch widgets
 ```
 
-Inside a worker, `self.manager.tqdm(...)` progress reporting is fine (it only
-emits a signal); anything that draws, reads, or mutates widgets is not.
+Inside a worker, `progress.tqdm(...)` progress reporting is fine (it only emits
+a signal); anything that draws, reads, or mutates widgets is not.
 
 ## One task style
 

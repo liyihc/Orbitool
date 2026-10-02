@@ -10,7 +10,7 @@ from Orbitool.models.file import FileSpectrumInfo
 
 from .. import setting
 from . import SpectraListUi, utils
-from .manager import Manager, ui_task, background
+from .manager import Manager, ui_task, background, progress
 from .utils import (TableUtils, get_tablewidget_selected_row, openfolder, set_header_sizes,
                     showInfo)
 
@@ -165,7 +165,7 @@ class Widget(QtWidgets.QWidget):
             iterator = spectra
 
         def func():
-            for spectrum in manager.tqdm(iterator):
+            for spectrum in progress.tqdm(iterator):
                 filename = f"spectrum {setting.format_export_time(spectrum.start_time)}-{setting.format_export_time(spectrum.end_time)}"
                 manager.msg.emit(f"export {filename}")
                 with open(folder / f"{filename}.csv", 'w', newline='') as f:

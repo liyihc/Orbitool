@@ -11,6 +11,7 @@ from PyQt6 import QtCore, QtWidgets
 
 from Orbitool import setting
 from ..manager import Manager
+from ..progress import progress
 from ..task import background, ui_task
 from ..thread import MultiProcess
 
@@ -805,3 +806,62 @@ def test_cookbook_migrated_form(worker_fails, show_info):
         assert show_info == []
     assert events == [True, False]  # busy given back in both variants
     assert not tab.manager.busy
+
+
+def test_thread_worker_reports_progress_without_manager(show_info):
+    widget = _Widget()
+    seen = []
+    widget.manager.tqdm.tqdm_signal.connect(
+        lambda label, percent, msg: seen.append(msg))
+
+    def work():  # no `manager`/`self` in scope: only the module-level accessor
+        for _ in progress.tqdm(range(3), msg="counting"):
+            pass
+
+    @ui_task
+    async def task(widget):
+        await background(work, "work")
+
+    task.func(widget)
+
+    assert len(seen) == 3
+    assert all(msg.startswith("counting") for msg in seen)
+    assert not widget.manager.busy
+    assert show_info == []
+
+
+def test_progress_accessor_is_noop_without_worker(show_info):
+    widget = _Widget()
+    seen = []
+    widget.manager.tqdm.tqdm_signal.connect(
+        lambda label, percent, msg: seen.append(msg))
+
+    for _ in progress.tqdm(range(2), msg="main"):  # no background(...) installed
+        pass
+
+    assert seen == []  # no worker context: silent, never raises
+    assert show_info == []
+
+
+def test_thread_worker_progress_on_real_worker_thread(
+        monkeypatch, show_info):
+    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
+    widget = _Widget()
+    seen = []
+    widget.manager.tqdm.tqdm_signal.connect(
+        lambda label, percent, msg: seen.append(msg))
+
+    def work():  # runs on a real QThread, not inline
+        for _ in progress.tqdm(range(3), msg="counting"):
+            pass
+
+    @ui_task
+    async def task(widget):
+        await background(work, "work")
+
+    task.func(widget)
+    _wait_until(lambda: not widget.manager.busy)
+
+    assert len(seen) == 3
+    assert all(msg.startswith("counting") for msg in seen)
+    assert show_info == []

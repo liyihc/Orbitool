@@ -13,6 +13,7 @@ from ... import setting
 from Orbitool.config import _Setting
 from ..utils import sleep
 from . import manager
+from .progress import ProgressScope
 
 logger = logging.getLogger("Orbitool")
 
@@ -32,17 +33,19 @@ class Thread(QtCore.QThread):
         self.args = args
         self.kwargs = kwargs
         self.result = None
+        self.tqdm: manager.TQDMER = None
 
     def run(self):
         try:
-            result = self.func(*self.args, **self.kwargs)
+            with ProgressScope(self.tqdm):
+                result = self.func(*self.args, **self.kwargs)
             self.result = (RESULT, result)
         except Exception as e:
             self.result = (EXCEPTION, e)
         self.result_ready.emit(self.result)
 
     def set_tqdmer(self, tqdmer: manager.TQDMER):
-        pass
+        self.tqdm = tqdmer
 
 
 Data = TypeVar("Data")
@@ -108,10 +111,11 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
         try:
             if self.tqdm is None:
                 self.tqdm = manager.TQDMER()
-            if setting.debug.NO_MULTIPROCESS:
-                self._single_run_memory()
-            else:
-                self._run()
+            with ProgressScope(self.tqdm):
+                if setting.debug.NO_MULTIPROCESS:
+                    self._single_run_memory()
+                else:
+                    self._run()
         except Exception as e:
             self.finished_emit((EXCEPTION, e))
         finally:

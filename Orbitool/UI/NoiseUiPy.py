@@ -21,7 +21,7 @@ from Orbitool.utils import binary_search
 
 from . import NoiseUi, component
 from .component import factory
-from .manager import Manager, MultiProcess, ui_task, background
+from .manager import Manager, MultiProcess, ui_task, background, progress
 from .utils import (TableUtils, get_tablewidget_selected_row, savefile, set_header_sizes,
                     showInfo)
 
@@ -414,7 +414,7 @@ class Widget(QtWidgets.QWidget):
             with open(f, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(["mz", "intensity"])
-                writer.writerows(self.manager.tqdm(
+                writer.writerows(progress.tqdm(
                     zip(s.mz, s.intensity), length=len(s.mz)))
 
         await background(export, "export")
@@ -443,7 +443,7 @@ class Widget(QtWidgets.QWidget):
             with open(f, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(["peak position", "peak intensity"])
-                writer.writerows(self.manager.tqdm(
+                writer.writerows(progress.tqdm(
                     zip(mz, intensity), length=len(mz)))
         await background(export, "export")
 

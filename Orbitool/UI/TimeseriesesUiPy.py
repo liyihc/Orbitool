@@ -22,7 +22,7 @@ from ..models.timeseries.timeseries import TimeSeries
 from ..utils.time_format.time_convert import converters
 from . import TimeseriesesUi
 from .component import Plot, factory
-from .manager import Manager, MultiProcess, ui_task, background
+from .manager import Manager, MultiProcess, ui_task, background, progress
 from .utils import TableUtils, savefile, showInfo
 
 
@@ -286,8 +286,6 @@ class Widget(QtWidgets.QWidget):
         if not ret:
             return
 
-        manager = self.manager
-
         def func():
             delta_time = timedelta(seconds=1)
             times = list(chain.from_iterable([s.times for s in series]))
@@ -324,7 +322,7 @@ class Widget(QtWidgets.QWidget):
                 indexes = np.zeros(len(infos), dtype=int)
                 max_indexes = np.array([len(t) for t in stimes], dtype=int)
 
-                for current in manager.tqdm(times):
+                for current in progress.tqdm(times):
                     select = indexes < max_indexes
                     select &= np.array([slt and (abs(s[i] - current) < delta_time)
                                         for slt, i, s in zip(select, indexes, stimes)])

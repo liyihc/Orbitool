@@ -18,7 +18,7 @@ from Orbitool.utils import binary_search
 
 from . import PeakFitUi
 from .component import Plot
-from .manager import Manager, MultiProcess, ui_task, background
+from .manager import Manager, MultiProcess, ui_task, background, progress
 
 
 class FitMethod(str, Enum):
@@ -147,17 +147,16 @@ class Widget(QtWidgets.QWidget):
             "func": workspace.info.peak_shape_tab.func}), "fit use peak shape func")
 
         peaks = cast(List[FittedPeak], peaks)
-        manager = self.manager
         distribution = self.ui.calcDistributionCheckBox.isChecked()
 
         def formula_and_residual():
             rtol = workspace.info.formula_docker.calc_gen.rtol
             calc_get = workspace.info.formula_docker.get_calcer()
 
-            for peak in manager.tqdm(peaks, msg="calc formulas"):
+            for peak in progress.tqdm(peaks, msg="calc formulas"):
                 peak.formulas = calc_get(peak.peak_position)
             if distribution:
-                for peak in manager.tqdm(peaks, msg="correct formulas to natural distribution"):
+                for peak in progress.tqdm(peaks, msg="correct formulas to natural distribution"):
                     peak.formulas = correct_formula(peak, peaks, rtol)
 
             mz, residual = peakfit_func.calculateResidual(
@@ -444,7 +443,7 @@ class Widget(QtWidgets.QWidget):
             indexes = manager.getters.peak_list_selected_true_index.get()
 
         def func():
-            for index in manager.tqdm(indexes):
+            for index in progress.tqdm(indexes):
                 action(peaks[index])
 
         await background(func, msg)
@@ -469,8 +468,6 @@ class Widget(QtWidgets.QWidget):
         peaks = info.peaks
         indexes = info.shown_indexes
 
-        manager = self.manager
-
         if mass:
             def func():
                 masses = []
@@ -481,7 +478,7 @@ class Widget(QtWidgets.QWidget):
                 masses = np.array(masses)
                 rets = []
                 mass_delta = group_p.mass() - group_m.mass()
-                for index, peak in manager.tqdm(enumerate(peaks), "checking mass"):
+                for index, peak in progress.tqdm(enumerate(peaks), "checking mass"):
                     for times in range(step_mi, step_ma + 1):
                         mass = peak.peak_position + mass_delta * times
                         if abs(mass / masses[binary_search.indexNearest_np(masses, mass)] - 1) < rtol:
@@ -496,7 +493,7 @@ class Widget(QtWidgets.QWidget):
                     for f in peak.formulas:
                         shown_sets.add(f)
                 rets = []
-                for index, peak in manager.tqdm(enumerate(peaks), "checking formula"):
+                for index, peak in progress.tqdm(enumerate(peaks), "checking formula"):
                     for f in peak.formulas:
                         for ff in formula_range(f, group_p, group_m, step_mi, step_ma):
                             if ff in shown_sets:
@@ -557,12 +554,12 @@ class Widget(QtWidgets.QWidget):
 
         def func():
             index: int
-            for index in manager.tqdm(indexes, msg="calc formula"):
+            for index in progress.tqdm(indexes, msg="calc formula"):
                 peak = peaks[index]
                 peak.formulas = calc_get(peak.peak_position)
 
             if distribution:
-                for index in manager.tqdm(indexes, msg="correct formulas to natural distribution"):
+                for index in progress.tqdm(indexes, msg="correct formulas to natural distribution"):
                     peak = peaks[index]
                     peak.formulas = correct_formula(peak, peaks, rtol)
 

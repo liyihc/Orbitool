@@ -8,7 +8,7 @@ from Orbitool.models.file import FileSpectrumInfo, Path, PathList
 from Orbitool.UI.utils.utils import TableUtils
 
 from .. import utils as UiUtils
-from ..manager import Manager, Thread, ui_task, background
+from ..manager import Manager, Thread, ui_task, background, progress
 from ..utils import DragHelper, set_header_sizes, showInfo
 from . import FileUi
 from .table_filter_helper import TableFilterHelper
@@ -128,10 +128,8 @@ class Widget(QtWidgets.QWidget):
             pathlist = self.pathlist
             info = self.info
 
-            manager = self.manager
-
             def func():
-                for path in manager.tqdm(utils.files.FolderTraveler(folder, ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
+                for path in progress.tqdm(utils.files.FolderTraveler(folder, ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
                     p = pathlist.addThermoFile(path)
                     for filter in p.getFileHandler().getUniqueFilters():
                         info.add_filter(filter)
@@ -168,7 +166,7 @@ class Widget(QtWidgets.QWidget):
             pathlist = self.pathlist
             for p in paths:
                 if p.is_dir():
-                    for path in self.manager.tqdm(utils.files.FolderTraveler(str(p), ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
+                    for path in progress.tqdm(utils.files.FolderTraveler(str(p), ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
                         for filter in pathlist.addThermoFile(path).getFileHandler().getUniqueFilters():
                             info.add_filter(filter)
                 elif p.suffix.lower() == ".raw":

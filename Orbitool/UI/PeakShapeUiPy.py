@@ -17,8 +17,33 @@ from Orbitool.models.spectrum import FittedPeak
 
 from .. import setting
 from . import PeakShapeUi, component
-from .manager import Manager, Thread, ui_task, background
+from .manager import Manager, Thread, ui_task, background, progress
 from .utils import savefile, showInfo
+
+
+def _export_peak_shape(path, peaks, func):
+    with open(path, 'w', newline='') as file:
+        length = len(peaks)
+        height = max(len(peak.mz) for peak in peaks)
+
+        export_peaks = -2 * np.ones((length, 2, height), dtype=float)
+
+        for ind, peak in enumerate(peaks):
+            peak_length = len(peak.mz)
+            export_peaks[ind][0][:peak_length] = peak.mz
+            export_peaks[ind][1][:peak_length] = peak.intensity
+
+        writer = csv.writer(file)
+        writer.writerow(
+            ['Noirmal distribution',
+             'sigma:', func.peak_fit_sigma,
+             'res:', func.peak_fit_res])
+
+        writer.writerow(['x', 'y'] * len(peaks))
+
+        for index in progress.tqdm(range(export_peaks.shape[2])):
+            writer.writerow(
+                [item if item > -1 else '' for item in export_peaks[:, :, index].reshape(-1)])
 
 
 class LineAnimation:
@@ -219,25 +244,5 @@ class Widget(QtWidgets.QWidget):
         info = self.info
         peaks = info.peaks_manager.peaks
         func = info.func
-        with open(f, 'w', newline='') as file:
-            length = len(peaks)
-            height = max(len(peak.mz) for peak in peaks)
-
-            export_peaks = -2 * np.ones((length, 2, height), dtype=float)
-
-            for ind, peak in enumerate(peaks):
-                peak_length = len(peak.mz)
-                export_peaks[ind][0][:peak_length] = peak.mz
-                export_peaks[ind][1][:peak_length] = peak.intensity
-
-            writer = csv.writer(file)
-            writer.writerow(
-                ['Noirmal distribution',
-                 'sigma:', func.peak_fit_sigma,
-                 'res:', func.peak_fit_res])
-
-            writer.writerow(['x', 'y'] * len(peaks))
-
-            for index in self.manager.tqdm(range(export_peaks.shape[2])):
-                writer.writerow(
-                    [item if item > -1 else '' for item in export_peaks[:, :, index].reshape(-1)])
+        await background(
+            lambda: _export_peak_shape(f, peaks, func), "export")
