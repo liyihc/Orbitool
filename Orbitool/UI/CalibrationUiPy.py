@@ -21,7 +21,7 @@ from Orbitool.utils import binary_search
 from . import CalibrationUi
 from .CalibrationDetailUiPy import Widget as CalibrationDetailWin
 from .component import Plot
-from .manager import Manager, MultiProcess, state_node
+from .manager import Manager, MultiProcess, ui_task, background
 from .utils import (DragHelper, get_tablewidget_selected_row, openfile,
                     savefile, showInfo)
 
@@ -124,8 +124,8 @@ class Widget(QtWidgets.QWidget):
         seg.n_ions = ui.nIonsSpinBox.value()
         seg.rtol = ui.segmentRtolDoubleSpinBox.value() * 1e-6
 
-    @state_node
-    def addSegment(self):
+    @ui_task
+    async def addSegment(self):
         ui = self.ui
         separator = ui.separatorDoubleSpinBox.value()
         formula_info = self.manager.workspace.info.formula_docker
@@ -134,8 +134,8 @@ class Widget(QtWidgets.QWidget):
         self.showSegments()
         self.showCurrentSegment()
 
-    @state_node(mode='n', withArgs=True)
-    def mouseRelease(self, e: QtGui.QMouseEvent):
+    @ui_task(mode="light")
+    async def mouseRelease(self, e: QtGui.QMouseEvent):
         ui = self.ui
         indexes = [ind.row()
                    for ind in ui.separatorListWidget.selectedIndexes()]
@@ -150,8 +150,8 @@ class Widget(QtWidgets.QWidget):
             menu.popup(e.globalPosition().toPoint())
         return QtWidgets.QListWidget.mouseReleaseEvent(ui.separatorListWidget, e)
 
-    @state_node(withArgs=True)
-    def mergeSegment(self, indexes: List[int]):
+    @ui_task
+    async def mergeSegment(self, indexes: List[int]):
         ma = max(indexes)
         mi = min(indexes)
         assert ma - mi == len(indexes) - \
@@ -167,8 +167,8 @@ class Widget(QtWidgets.QWidget):
         self.showSegments()
         self.showCurrentSegment()
 
-    @state_node(withArgs=True)
-    def changeSegment(self, item: QtWidgets.QListWidgetItem):
+    @ui_task
+    async def changeSegment(self, item: QtWidgets.QListWidgetItem):
         self.saveCurrentSegment()
 
         ind = self.ui.separatorListWidget.row(item)
@@ -176,13 +176,13 @@ class Widget(QtWidgets.QWidget):
 
         self.showCurrentSegment()
 
-    @state_node
-    def addIon(self):
+    @ui_task
+    async def addIon(self):
         self.info.add_ions(self.ui.ionLineEdit.text().split(','))
         self.showCurrentSegment()
 
-    @state_node
-    def removeIon(self):
+    @ui_task
+    async def removeIon(self):
         remove_ions = set()
         for index in get_tablewidget_selected_row(self.ui.ionsTableWidget):
             remove_ions.add(self.ui.ionsTableWidget.item(index, 0).text())
@@ -190,8 +190,8 @@ class Widget(QtWidgets.QWidget):
             ion for ion in self.info.ions if ion.shown_text not in remove_ions]
         self.showCurrentSegment()
 
-    @state_node
-    def importIons(self):
+    @ui_task
+    async def importIons(self):
         ret, f = openfile("Open calibration ions file", "*.csv")
         if not ret:
             return
@@ -205,8 +205,8 @@ class Widget(QtWidgets.QWidget):
             raise
         self.showCurrentSegment()
 
-    @state_node
-    def exportIons(self):
+    @ui_task
+    async def exportIons(self):
         ret, f = savefile("Save calibration ions", "*.csv")
         if not ret:
             return
@@ -215,18 +215,18 @@ class Widget(QtWidgets.QWidget):
         l.extend(ion.shown_text for ion in self.info.ions)
         f.write_text("\n".join(l))
 
-    @state_node(mode="e", withArgs=True)
-    def tableDragEnterEvent(self, event: QtGui.QDragEnterEvent):
+    @ui_task(mode="light")
+    async def tableDragEnterEvent(self, event: QtGui.QDragEnterEvent):
         if self.drag_helper.accept(event.mimeData()):
             event.setDropAction(QtCore.Qt.DropAction.LinkAction)
             event.accept()
 
-    @state_node(mode="e", withArgs=True)
-    def tableDragMoveEvent(self, event: QtGui.QDragMoveEvent):
+    @ui_task(mode="light")
+    async def tableDragMoveEvent(self, event: QtGui.QDragMoveEvent):
         event.accept()
 
-    @state_node(withArgs=True)
-    def tableDropEvent(self, event: QtGui.QDropEvent):
+    @ui_task
+    async def tableDropEvent(self, event: QtGui.QDropEvent):
         ions = []
         for f in self.drag_helper.yield_file(event.mimeData()):
             if f.suffix.lower() in {".txt", ".csv"}:
@@ -245,8 +245,8 @@ class Widget(QtWidgets.QWidget):
             self.info.add_ions(ions)
         self.showCurrentSegment()
 
-    @state_node
-    def calcInfo(self):
+    @ui_task
+    async def calcInfo(self):
         workspace = self.manager.workspace
         info = self.info
 
@@ -271,7 +271,7 @@ class Widget(QtWidgets.QWidget):
                     segments=info.calibrate_info_segments,
                     rtol=rtol))
 
-            path_ions_peak: Dict[str, List[List[Tuple[float, float]]]] = yield func, "split and fit target peaks"
+            path_ions_peak: Dict[str, List[List[Tuple[float, float]]]] = await background(func, "split and fit target peaks")
 
             def func():
                 info.path_times = {
@@ -281,12 +281,12 @@ class Widget(QtWidgets.QWidget):
                     info.path_ion_infos.clear()
                 info.done_split(path_ions_peak)
                 info.rtol = rtol
-            yield func, "calculate ions points"
+            await background(func, "calculate ions points")
 
         def func():
             info.calc_calibrator()
 
-        yield func, "calculate calibration infos"
+        await background(func, "calculate calibration infos")
 
         self.showAllInfo()
 
@@ -351,14 +351,14 @@ class Widget(QtWidgets.QWidget):
         ax.autoscale(True, True, True)
         plot.canvas.draw()
 
-    @state_node
-    def showDetail(self):
+    @ui_task
+    async def showDetail(self):
         win = CalibrationDetailWin(self.manager)
         self.manager.calibration_detail_win = win
         win.show()
 
-    @state_node(withArgs=True)
-    def calibrate(self, skip: bool):
+    @ui_task
+    async def calibrate(self, skip: bool):
         workspace = self.manager.workspace
         rtol = workspace.info.file_tab.rtol
         noise_info = workspace.info.noise_tab
@@ -390,7 +390,7 @@ class Widget(QtWidgets.QWidget):
         if not noise_skip:
             msg.append("denoise")
         msg = ', '.join(msg)
-        yield calibrate_merge, msg
+        await background(calibrate_merge, msg)
         self.callback.emit()
 
 

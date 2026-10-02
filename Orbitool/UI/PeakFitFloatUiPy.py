@@ -13,7 +13,7 @@ from Orbitool.utils import binary_search
 from . import PeakFitFloatUi
 from .component import Plot
 from .formulas import FormulaResultWindow
-from .manager import Manager, state_node
+from .manager import Manager, ui_task
 from .utils import set_header_sizes
 
 
@@ -76,8 +76,8 @@ class Window(QtWidgets.QMainWindow):
     def info(self):
         return self.manager.workspace.info.peak_fit_tab
 
-    @state_node(withArgs=True)
-    def finetuneFormula(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def finetuneFormula(self, item: QtWidgets.QTableWidgetItem):
         row = item.row()
         peak_index = self.original_slice.start + row
 
@@ -216,12 +216,12 @@ class Window(QtWidgets.QMainWindow):
         ax.set_xlim(origin_peak.mz.min(), origin_peak.mz.max())
         self.plot.canvas.draw()
 
-    @state_node
-    def replotPeak(self):
+    @ui_task
+    async def replotPeak(self):
         self.plotPeak()
 
-    @state_node
-    def refit(self):
+    @ui_task
+    async def refit(self):
         num = self.ui.spinBox.value()
         func = self.manager.workspace.info.peak_shape_tab.func
         info = self.info
@@ -238,8 +238,8 @@ class Window(QtWidgets.QMainWindow):
         self.showPeak()
         self.plotPeak()
 
-    @state_node
-    def save(self):
+    @ui_task
+    async def save(self):
         new_peaks = self.peaks
 
         self.info.raw_split_num[self.original_index] = len(new_peaks)

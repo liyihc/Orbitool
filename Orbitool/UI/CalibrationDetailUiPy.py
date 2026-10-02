@@ -1,7 +1,7 @@
 import math
 
 import numpy as np
-from .manager import Manager, state_node
+from .manager import Manager, ui_task
 import matplotlib.ticker
 
 
@@ -68,8 +68,8 @@ class Widget(QtWidgets.QWidget):
         self.showSpcetrum(0)
         self.showFile(0)
 
-    @state_node(withArgs=True)
-    def showSpectrumAt(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def showSpectrumAt(self, item: QtWidgets.QTableWidgetItem):
         index = item.row()
         self.showSpcetrum(index)
 
@@ -158,12 +158,12 @@ class Widget(QtWidgets.QWidget):
         ax.autoscale_view(True, True, True)
         plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def showIonAt(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def showIonAt(self, item: QtWidgets.QTableWidgetItem):
         self.showIon(item.row())
 
-    @state_node(withArgs=True)
-    def next_ion(self, step: int):
+    @ui_task
+    async def next_ion(self, step: int):
         if self.spectrum is None:
             return
         if self.current_ion_index is None:
@@ -188,8 +188,8 @@ class Widget(QtWidgets.QWidget):
         ax.set_ylim(y_min, y_max)
         plot.canvas.draw()
 
-    @state_node(withArgs=True)
-    def showFileAt(self, item: QtWidgets.QTableWidgetItem):
+    @ui_task
+    async def showFileAt(self, item: QtWidgets.QTableWidgetItem):
         self.showFile(item.row())
 
     def showFile(self, index: int):
