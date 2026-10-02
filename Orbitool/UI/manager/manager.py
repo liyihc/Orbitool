@@ -50,7 +50,6 @@ class Manager(QObject):
         super().__init__()
         self.running_thread: QThread = None
         self.workspace: WorkSpace = None
-        self._busy: bool = True
         self._busy_count: int = 0
 
         self.formulas_result_win: QMainWindow = None
@@ -68,45 +67,40 @@ class Manager(QObject):
 
     def set_busy(self, busy: bool):
         """
-        Direct busy-flag setter: sets/clears the flag only, the ui_task
-        count stays untouched. Used to simulate a running operation.
-        busy_signal fires only when the effective busy (flag or count > 0)
-        actually changes.
+        Acquire (True) or release (False) one manual busy hold, used to
+        simulate a running operation. It is the same counter `begin_task`/
+        `end_task` use, so call it in pairs; docs and tests rely on that.
         """
-        if busy ^ self._busy:
-            was_busy = self.busy
-            self._busy = busy
-            if was_busy != self.busy:
-                self.busy_signal.emit(self.busy)
+        if busy:
+            self.begin_task()
+        else:
+            self.end_task()
 
     def begin_task(self) -> None:
         """
-        ui_task start hook: hold one busy count. busy is the legacy flag
-        or count > 0, so the signal fires only on the idle -> busy edge.
+        Hold one busy count, shared by ui_task and `set_busy`. busy_signal
+        fires only on the idle -> busy edge.
         """
-        was_busy = self.busy
         self._busy_count += 1
-        if not was_busy:
+        if self._busy_count == 1:
             self.busy_signal.emit(True)
 
     def end_task(self) -> None:
         """
-        ui_task finish hook (success or failure): give back this task's
-        count; busy only clears, and the signal fires only on the
-        busy -> idle edge, when no legacy flag and no count remain.
+        Give back one busy count (success or failure). busy_signal fires
+        only on the busy -> idle edge, when the last holder finishes.
         """
-        was_busy = self.busy
-        if self._busy_count > 0:
-            self._busy_count -= 1
-        else:
+        if self._busy_count <= 0:
             logger.warning(
                 "end_task called without a matching begin_task")
-        if was_busy and not self.busy:
+            return
+        self._busy_count -= 1
+        if self._busy_count == 0:
             self.busy_signal.emit(False)
 
     @property
     def busy(self):
-        return self._busy or self._busy_count > 0
+        return self._busy_count > 0
 
 
 T = TypeVar("T")

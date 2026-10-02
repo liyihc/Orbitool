@@ -116,7 +116,7 @@ class Window(QtWidgets.QMainWindow):
         self.progress_bars: Dict[int, QtWidgets.QProgressBar] = {}
         self.manager.msg.connect(self.showMsg)
         self.manager.tqdm.tqdm_signal.connect(self.showBarLabelMessage)
-        self.manager.set_busy(False)
+        self.set_busy(False)
         if workspacefile is not None:
             self._load_workspace(workspacefile)
         else:

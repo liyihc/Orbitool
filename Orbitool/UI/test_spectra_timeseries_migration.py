@@ -31,33 +31,16 @@ import numpy as np
 import pytest
 from PyQt6 import QtWidgets
 
-from Orbitool import setting
 from ..models.spectrum.spectrum import Spectrum
 from ..models.timeseries import TimeSeries
 from ..models.workspace.timeseries import TimeSeriesInfoRow
-from .MainUiPy import Window
-from .utils import test as uitest
+# debug_settings is an autouse fixture re-exported for pytest
+from .tests.migration_harness import MigrationEnv, debug_settings  # noqa: F401
 
-task_module = importlib.import_module("Orbitool.UI.manager.task")
 spectrum_module = importlib.import_module("Orbitool.UI.SpectrumUiPy")
 timeserieses_module = importlib.import_module("Orbitool.UI.TimeseriesesUiPy")
 noise_module = importlib.import_module("Orbitool.UI.NoiseUiPy")
 peakshape_module = importlib.import_module("Orbitool.UI.PeakShapeUiPy")
-
-# a QApplication with no references gets destroyed, breaking every event
-# loop that runs afterwards
-app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-
-
-@pytest.fixture(autouse=True)
-def debug_settings(monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", True)
-    monkeypatch.setattr(setting.debug, "NO_MULTIPROCESS", True)
-
-
-def _drain_dialog_queue():
-    while not uitest.q.empty():
-        uitest.q.get_nowait()
 
 
 def _series(position: float) -> TimeSeries:
@@ -69,52 +52,11 @@ def _series(position: float) -> TimeSeries:
         intensity=array("d", [1.0, 2.0]))
 
 
-class _Env:
-    def __init__(self):
-        self.dialogs = []
-        self.busy = []
-        self.msgs = []
-        self.timeline = []
-        self.click_series = []
-
-    def reset(self):
-        self.dialogs.clear()
-        self.busy.clear()
-        self.msgs.clear()
-        self.timeline.clear()
-        self.click_series.clear()
-        _drain_dialog_queue()
-
-
 @pytest.fixture(scope="module")
 def env(request):
-    state = _Env()
-    original_task_show_info = task_module.showInfo
-    original_noise_show_info = noise_module.showInfo
-    original_peakshape_show_info = peakshape_module.showInfo
-
-    def record_show_info(*args, **kwargs):
-        state.dialogs.append(args)
-        state.timeline.append(("dialog", args))
-
-    def teardown():
-        task_module.showInfo = original_task_show_info
-        noise_module.showInfo = original_noise_show_info
-        peakshape_module.showInfo = original_peakshape_show_info
-        _drain_dialog_queue()
-        if state.window is not None:
-            state.window.close()
-
-    task_module.showInfo = record_show_info
-    noise_module.showInfo = record_show_info
-    peakshape_module.showInfo = record_show_info
-    request.addfinalizer(teardown)
-
-    state.window = window = Window()
-    state.startup_dialogs = list(state.dialogs)
-    window.manager.busy_signal.connect(state.busy.append)
-    window.manager.msg.connect(state.msgs.append)
-    window.timeseriesesTab.click_series.connect(
+    state = MigrationEnv()
+    state.build(request, extra_dialog_modules=(noise_module, peakshape_module))
+    state.window.timeseriesesTab.click_series.connect(
         lambda: state.click_series.append(1))
     return state
 

@@ -76,8 +76,11 @@ class Widget(QtWidgets.QWidget):
     def updateState(self):
         self.info.ui_state.store_state(self.ui)
 
+    def _timeseries_need_sync(self) -> bool:
+        return len(self.info.timeseries_infos) != len(self.timeseries)
+
     def _sync_timeseries(self):
-        if len(self.info.timeseries_infos) != len(self.timeseries):
+        if self._timeseries_need_sync():
             self.info.sync(self.timeseries)
 
     @ui_task
@@ -177,8 +180,8 @@ class Widget(QtWidgets.QWidget):
         await self.showTimeseries()
 
     async def showTimeseries(self):
-        if len(self.info.timeseries_infos) != len(self.timeseries):
-            await background(lambda: self.info.sync(self.timeseries), "update timeseries info")
+        if self._timeseries_need_sync():
+            await background(self._sync_timeseries, "update timeseries info")
         self._show_timeseries_table()
 
     def _show_timeseries_table(self):

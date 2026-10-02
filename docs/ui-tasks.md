@@ -33,8 +33,13 @@ worker thread |                              |---- run work ----|         │
   value, including falsy ones (`0`, `""`, `None`, `()`). A worker exception is
   thrown **at the await point**, so ordinary `try/except/finally` applies on
   the main thread with the worker's original traceback.
-- Only `await background(...)` may be awaited. This is not asyncio and there
-  is no event loop of your own.
+- Only `background(...)` is a worker boundary, but you may also `await` a
+  plain `async def` helper that itself awaits only `background(...)` (its
+  yielded step bubbles up to the driver). Any other suspendable is rejected
+  at the await point by a runtime check (the driver only accepts a background
+  step) and goes through the standard error fallback: `asyncio.sleep`, or a
+  `@ui_task` method (a task is not awaitable — call it, or relay through
+  `join`). This is not asyncio and there is no event loop of your own.
 
 In the test suite and in `--debug`'s synchronous mode
 (`setting.debug.thread_block_gui`) workers run inline for determinism; the
@@ -55,9 +60,9 @@ decoration time.
 Counting rules (default and `join` only): each task increments a busy count on
 start and decrements it on finish — success or failure — so busy clears only
 when the **last** holder finishes, regardless of finish order, and no task can
-clear someone else's busy. (The manager also keeps a direct busy flag used to
-simulate a running operation; the effective busy state is that flag or
-count > 0.)
+clear someone else's busy. The count is the single source of truth
+(`busy == count > 0`); `manager.set_busy(True/False)` simulates a running
+operation by taking/returning one hold on the same counter, so call it in pairs.
 
 How to choose:
 
@@ -270,8 +275,7 @@ emits a signal); anything that draws, reads, or mutates widgets is not.
 
 All UI tasks use `ui_task` / `background`; there is no second mechanism. The
 driver advances the task coroutine over one send/throw protocol, and busy is a
-count (plus the direct flag used for busy simulation), so `busy_signal` fires
-only on a change.
+single count, so `busy_signal` fires only on a change.
 
 ## Examples are test-backed
 

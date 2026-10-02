@@ -20,7 +20,6 @@ app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 class _Widget:
     def __init__(self):
         self.manager = Manager()
-        self.manager.set_busy(False)
 
 
 @pytest.fixture(autouse=True)

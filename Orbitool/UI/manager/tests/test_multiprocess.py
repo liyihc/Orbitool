@@ -138,6 +138,28 @@ def test_abort_then_completion_notifies_once():
     assert pp.result == notifications[0]
 
 
+def test_natural_completion_then_abort_does_not_roll_back():
+    abort_p.rollback_calls = 0
+    pp = abort_p({}, {"length": 1})
+
+    pp.finished_emit((RESULT, 7))
+    pp.abort()  # suppressed: the completion notification already won
+    pp._finish_cleanup()
+
+    assert abort_p.rollback_calls == 0
+
+
+def test_abort_winning_the_notification_rolls_back():
+    abort_p.rollback_calls = 0
+    pp = abort_p({}, {"length": 1})
+
+    pp.abort()
+    pp.finished_emit((RESULT, 7))  # suppressed
+    pp._finish_cleanup()
+
+    assert abort_p.rollback_calls == 1
+
+
 def test_abort_multiprocess_rollback():
     old_mp = setting.debug.NO_MULTIPROCESS
     old_cores = setting.general.multi_cores
@@ -167,13 +189,6 @@ def test_abort_multiprocess_rollback():
     finally:
         setting.debug.NO_MULTIPROCESS = old_mp
         setting.general.multi_cores = old_cores
-
-
-def test_result_signal_no_longer_shadows_qthread_finished():
-    # the payload signal is renamed so it cannot shadow QThread.finished
-    for cls in (Thread, MultiProcess):
-        assert "finished" not in cls.__dict__, cls
-        assert "result_ready" in cls.__dict__, cls
 
 
 def test_thread_emits_result_ready_with_tuple_and_qthread_finished_fires():

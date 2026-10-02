@@ -1,3 +1,4 @@
+import enum
 import functools
 import inspect
 import logging
@@ -13,7 +14,19 @@ from .thread import EXCEPTION, Thread
 
 logger = logging.getLogger("Orbitool")
 
-_TASK_MODES = ("default", "join", "light")
+
+class TaskMode(str, enum.Enum):
+    """The three `ui_task` busy modes (no letter aliases)."""
+    DEFAULT = "default"
+    JOIN = "join"
+    LIGHT = "light"
+
+    @classmethod
+    def parse(cls, mode: str) -> "TaskMode":
+        try:
+            return cls(mode)
+        except ValueError as e:
+            raise ValueError(f"unsupported ui_task mode: {mode!r}") from e
 
 
 class Step:
@@ -217,14 +230,13 @@ class ui_task:
     """
     def __init__(self, func: Optional[Callable] = None, *,
                  mode: str = "default") -> None:
-        if mode not in _TASK_MODES:
-            raise ValueError(f"unsupported ui_task mode: {mode!r}")
+        parsed_mode = TaskMode.parse(mode)
         if func is not None and not callable(func):
             raise TypeError(
                 f"ui_task expects a callable task function, got {func!r}")
         self._func = func
         self._signature = inspect.signature(func) if func is not None else None
-        self._mode = mode
+        self._mode = parsed_mode
         self._bind_cache = weakref.WeakKeyDictionary()
 
     @property
@@ -237,18 +249,18 @@ class ui_task:
         def wrapper(selfWidget, *args, **kwargs):
             manager: Manager = selfWidget.manager
             mode = self._mode
-            counts = mode != "light"
-            if mode == "default" and manager.busy:
+            holds_busy = mode is not TaskMode.LIGHT
+            if mode is TaskMode.DEFAULT and manager.busy:
                 showInfo("Wait for process", 'busy')
                 return
-            if counts:
+            if holds_busy:
                 was_idle = not manager.busy
                 manager.begin_task()
                 if was_idle:
                     sleep(.05)
 
             def on_done():
-                if counts:
+                if holds_busy:
                     manager.end_task()
 
             def on_error(e: BaseException):
@@ -259,7 +271,7 @@ class ui_task:
                     logger.error(
                         "failed to show the task error dialog", exc_info=True)
                 finally:
-                    if counts:
+                    if holds_busy:
                         manager.end_task()
 
             try:

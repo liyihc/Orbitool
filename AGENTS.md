@@ -38,6 +38,9 @@ Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/development.md`.
 - Bumping `Orbitool/version.py` may need a matching updater in
   `models/workspace/updater/`, otherwise old `.Orbitool` workspaces won't open
 - `test_thermo.py` hardcodes a personal data path; those tests fail on other machines
+- Run the suite with `uv run --group dev pytest` and judge it by the exit code
+  (`$LASTEXITCODE`); never pipe it through `Select-Object -Last N` or similar —
+  that hides failure tracebacks, and the command runner already captures full output
 - Code and docs land together: when a change alters a command, workflow, layout, or
   behavior that `docs/`, `readme.md`, or `CONTEXT.md`/`docs/adr/` describes, update
   that doc in the same change

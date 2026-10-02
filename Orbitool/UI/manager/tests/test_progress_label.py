@@ -15,7 +15,6 @@ def test_progress_label_stays_unique_across_busy_transitions():
     first = manager.tqdm(msg="read", length=1)
     first.update()
 
-    manager.set_busy(False)
     manager.set_busy(True)
     manager.set_busy(False)
 

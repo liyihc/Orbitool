@@ -69,25 +69,35 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
         self.tqdm: manager.TQDMER = None
         self.result = None
         self._emitted = False
+        self._finished_normally = False
         self._rolled_back = False
         self._emit_lock = threading.Lock()
 
     @final
-    def finished_emit(self, t: tuple):
+    def finished_emit(self, t: tuple) -> bool:
+        """Emit the terminal notification; the first one wins.
+
+        Returns True when this call emitted, False when a previous
+        notification already won and this one was suppressed. Records
+        whether the winner was a normal RESULT, which is what decides if
+        a late abort must roll the file back (it must not).
+        """
         with self._emit_lock:
             if self._emitted:
                 suppressed = t
             else:
                 self._emitted = True
                 self.result = t
+                self._finished_normally = t[0] == RESULT
                 suppressed = None
         if suppressed is not None:
             if suppressed[0] == EXCEPTION:
                 exc = suppressed[1]
                 logger.error(
                     "finished notification already sent, suppressed", exc_info=exc)
-            return
+            return False
         self.result_ready.emit(t)
+        return True
 
     @final
     def set_tqdmer(self, tqdmer: manager.TQDMER):
@@ -105,11 +115,18 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
         except Exception as e:
             self.finished_emit((EXCEPTION, e))
         finally:
-            if self.aborted:
-                try:
-                    self._rollback()
-                except Exception as e:
-                    logger.error(str(e), exc_info=e)
+            self._finish_cleanup()
+
+    @final
+    def _finish_cleanup(self):
+        # An abort only rolls back when it won the terminal notification.
+        # A natural completion that emitted first must not roll back even if
+        # a late abort raced in after it (first terminal notification wins).
+        if self.aborted and not self._finished_normally:
+            try:
+                self._rollback()
+            except Exception as e:
+                logger.error(str(e), exc_info=e)
 
     @final
     def _run(self):

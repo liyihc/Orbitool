@@ -160,10 +160,8 @@ class Widget(QtWidgets.QWidget):
             formula = Formula(self.ui.lineEdit.text())
             self.info.general_setting.noise_formulas.append(
                 NoiseFormulaParameter(formula=formula))
-        except Exception:
+        finally:
             self.showNoiseFormula()
-            raise
-        self.showNoiseFormula()
 
     @ui_task
     async def delFormula(self):
@@ -171,10 +169,8 @@ class Widget(QtWidgets.QWidget):
             indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
             for index in reversed(indexes):
                 del self.info.general_setting.noise_formulas[index]
-        except Exception:
+        finally:
             self.showNoiseFormula()
-            raise
-        self.showNoiseFormula()
 
     @ui_task
     async def calcNoise(self):

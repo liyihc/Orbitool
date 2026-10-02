@@ -26,7 +26,6 @@ app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 class _Widget:
     def __init__(self):
         self.manager = Manager()
-        self.manager.set_busy(False)
 
 
 @pytest.fixture(autouse=True)
@@ -317,6 +316,29 @@ def test_descriptor_binding_and_parenthesized_decorator(show_info):
     assert show_info == []
 
 
+def test_only_background_steps_may_be_awaited(show_info, caplog):
+    # a plain async helper that only awaits background(...) is fine (the
+    # migration tests cover it); any other suspendable is rejected at the
+    # await point through the uniform error fallback
+    widget = _Widget()
+
+    class _ForeignAwaitable:
+        def __await__(self):
+            yield "not a background step"
+            return None
+
+    @ui_task
+    async def task(widget):
+        await _ForeignAwaitable()
+
+    with caplog.at_level(logging.ERROR, logger="Orbitool"):
+        task.func(widget)
+
+    assert show_info and "only background(...) steps can be awaited" in \
+        show_info[0][0]
+    assert not widget.manager.busy
+
+
 def test_unknown_mode_rejected_at_decoration():
     with pytest.raises(ValueError):
         ui_task(mode="bogus")
@@ -404,17 +426,12 @@ def test_unbindable_arguments_raise_clear_error_and_reset_busy(
     assert not w.manager.busy
 
 
-def test_new_api_rejects_with_args_switch():
+def test_unknown_keyword_argument_rejected():
     async def sample(widget):
         pass
 
-    # the old argument switch's keyword, assembled from parts so the deleted
-    # name leaves no grep residue while the rejection itself stays pinned
-    old_switch = "with" + "Args"
     with pytest.raises(TypeError):
-        ui_task(**{old_switch: True})
-    with pytest.raises(TypeError):
-        ui_task(sample, **{old_switch: True})
+        ui_task(sample, unsupported_option=True)
 
 
 def test_ui_task_binding_cache_releases_host():

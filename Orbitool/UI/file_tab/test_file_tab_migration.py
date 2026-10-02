@@ -9,89 +9,28 @@ answered through Orbitool.UI.utils.test.input, the period/detail dialogs
 are stubbed where they would exec() a nested event loop, and drag & drop
 goes through a stubbed DragHelper.
 """
-import importlib
 from datetime import datetime
 
 import pytest
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from Orbitool import setting
-from ..MainUiPy import Window
 from ..utils import test as uitest
 from . import CustomPeriodUiPy, FileDetailUiPy
-
-# the package rebinds names it re-exports, so the module itself must be
-# resolved through importlib, not through attribute lookup
-task_module = importlib.import_module("Orbitool.UI.manager.task")
-
-# a QApplication with no references gets destroyed, breaking every event
-# loop that runs afterwards
-app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-
-
-@pytest.fixture(autouse=True)
-def debug_settings(monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", True)
-    monkeypatch.setattr(setting.debug, "NO_MULTIPROCESS", True)
-
-
-def _drain_dialog_queue():
-    # a leftover test.input() answer would leak into a later dialog call
-    while not uitest.q.empty():
-        uitest.q.get_nowait()
-
-
-class _FileTabEnv:
-    def __init__(self):
-        self.window = None
-        self.manager = None
-        self.filetab = None
-        self.helper = None
-        self.dialogs = []       # patched task showInfo args
-        self.timeline = []      # ("dialog", args), for recovery-before-dialog order
-        self.busy = []
-        self.msgs = []
-        self.callback_hits = []
-        self.startup_dialogs = []
-
-    def reset(self):
-        self.dialogs.clear()
-        self.timeline.clear()
-        self.busy.clear()
-        self.msgs.clear()
-        self.callback_hits.clear()
-        _drain_dialog_queue()
+# debug_settings is an autouse fixture re-exported for pytest
+from ..tests.migration_harness import MigrationEnv, debug_settings  # noqa: F401
 
 
 @pytest.fixture(scope="module")
 def env(request):
-    state = _FileTabEnv()
-    original_show_info = task_module.showInfo
-
-    def record_show_info(*args, **kwargs):
-        state.dialogs.append(args)
-        state.timeline.append(("dialog", args))
-
-    def teardown():
-        task_module.showInfo = original_show_info
-        _drain_dialog_queue()
-        if state.window is not None:
-            state.window.close()
-
-    task_module.showInfo = record_show_info
-    request.addfinalizer(teardown)
-
-    state.window = window = Window()
+    state = MigrationEnv()
+    state.build(request)
+    window = state.window
     state.manager = window.manager
     state.filetab = window.fileTab
     state.helper = window.fileTab.filter_helper
-    state.startup_dialogs = list(state.dialogs)
-
     # isolate the file tab: file_tab_finish drives the spectra/noise tabs
     window.fileTab.callback.disconnect(window.file_tab_finish)
     window.fileTab.callback.connect(lambda: state.callback_hits.append(1))
-    window.manager.busy_signal.connect(state.busy.append)
-    window.manager.msg.connect(state.msgs.append)
     return state
 
 

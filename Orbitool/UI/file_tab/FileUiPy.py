@@ -71,6 +71,14 @@ class Widget(QtWidgets.QWidget):
         ui = self.ui
         self.info.ui_state.store_state(ui)
 
+    def _refresh_paths(self, *, refresh_filters: bool = True):
+        """Repaint the path table (and, unless a bare table refresh is
+        wanted, the filter table). Shared by the task success tails and
+        their recovery handlers."""
+        self.showPaths()
+        if refresh_filters:
+            self.filter_helper.show_filter()
+
     @ui_task
     async def edit_period(self):
         from .CustomPeriodUiPy import Dialog
@@ -106,10 +114,9 @@ class Widget(QtWidgets.QWidget):
 
             length = await background(func, "read files")
 
-            self.showPaths()
-            self.filter_helper.show_filter()
+            self._refresh_paths()
         except Exception:
-            self.showPaths()
+            self._refresh_paths(refresh_filters=False)
             raise
 
     @ui_task
@@ -133,11 +140,9 @@ class Widget(QtWidgets.QWidget):
 
             await background(func, "read folders")
 
-            self.showPaths()
-            self.filter_helper.show_filter()
+            self._refresh_paths()
         except Exception:
-            self.showPaths()
-            self.filter_helper.show_filter()
+            self._refresh_paths()
             raise
 
     @ui_task
@@ -173,8 +178,7 @@ class Widget(QtWidgets.QWidget):
             self.filter_helper.refresh_filter_polarity()
         await background(func, "read files")
 
-        self.showPaths()
-        self.filter_helper.show_filter()
+        self._refresh_paths()
 
     @ui_task
     async def removePath(self):
@@ -189,11 +193,9 @@ class Widget(QtWidgets.QWidget):
                         info.rm_filter(f)
             await background(func)
 
-            self.showPaths()
-            self.filter_helper.show_filter()
+            self._refresh_paths()
         except Exception:
-            self.showPaths()
-            self.filter_helper.show_filter()
+            self._refresh_paths()
             raise
 
     def showPaths(self):

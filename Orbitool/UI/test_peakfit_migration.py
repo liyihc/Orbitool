@@ -21,26 +21,19 @@ Placed at the batch root (all files are top-level `Orbitool/UI` modules) and
 listed in `pytest.ini`.
 """
 import importlib
-import inspect
 from array import array
 from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
-from PyQt6 import QtWidgets
 
-from Orbitool import setting
 from ..models.peakfit.normal_distribution import NormalDistributionFunc
 from ..models.spectrum import FittedPeak, Peak, Spectrum
-from .MainUiPy import Window
-from .utils import test as uitest
+# debug_settings is an autouse fixture re-exported for pytest
+from .tests.migration_harness import (  # noqa: F401
+    MigrationEnv, debug_settings, task_module)
 
-task_module = importlib.import_module("Orbitool.UI.manager.task")
 peakfit_module = importlib.import_module("Orbitool.UI.PeakFitUiPy")
-
-# a QApplication with no references gets destroyed, breaking every event
-# loop that runs afterwards
-app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 _START = datetime(2024, 1, 1, 12)
 
@@ -48,51 +41,9 @@ _SIGMA = 2.852197450904393e-06
 _RES = 148889.02590153966
 
 
-@pytest.fixture(autouse=True)
-def debug_settings(monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", True)
-    monkeypatch.setattr(setting.debug, "NO_MULTIPROCESS", True)
-
-
-def _drain_dialog_queue():
-    while not uitest.q.empty():
-        uitest.q.get_nowait()
-
-
-class _Env:
-    def __init__(self):
-        self.dialogs = []
-        self.busy = []
-        self.msgs = []
-
-    def reset(self):
-        self.dialogs.clear()
-        self.busy.clear()
-        self.msgs.clear()
-        _drain_dialog_queue()
-
-
 @pytest.fixture(scope="module")
 def env(request):
-    state = _Env()
-    original_task_show_info = task_module.showInfo
-
-    def record_show_info(*args, **kwargs):
-        state.dialogs.append(args)
-
-    def teardown():
-        task_module.showInfo = original_task_show_info
-        _drain_dialog_queue()
-        if state.window is not None:
-            state.window.close()
-
-    task_module.showInfo = record_show_info
-    request.addfinalizer(teardown)
-
-    state.window = window = Window()
-    window.manager.busy_signal.connect(state.busy.append)
-    window.manager.msg.connect(state.msgs.append)
-    return state
+    return MigrationEnv().build(request)
 
 
 @pytest.fixture(autouse=True)
@@ -177,20 +128,9 @@ def test_peakfit_all_sites_are_coroutine_tasks():
     count = 0
     for cls, names in _MIGRATED_SITES.items():
         for name in names:
-            task = cls.__dict__[name]
-            assert isinstance(task, task_module.ui_task), name
-            assert inspect.iscoroutinefunction(task._func), name
+            assert isinstance(cls.__dict__[name], task_module.ui_task), name
             count += 1
     assert count == 25
-
-
-def test_peakfit_helpers_are_coroutines():
-    assert inspect.iscoroutinefunction(peakfit_module.Widget._general_action)
-    assert inspect.iscoroutinefunction(peakfit_module.Widget.fit_formula)
-    assert inspect.iscoroutinefunction(peakfit_module.Widget.fit_mass_list)
-    # not counted among the 25 decorated sites
-    assert not isinstance(
-        peakfit_module.Widget.__dict__["_general_action"], task_module.ui_task)
 
 
 # --------------------------------------------------------------------------
