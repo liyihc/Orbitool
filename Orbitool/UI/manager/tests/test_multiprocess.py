@@ -3,7 +3,7 @@ from multiprocessing import freeze_support
 from time import sleep
 
 from PyQt6 import QtWidgets, QtCore
-from .. import MultiProcess, Manager
+from .. import MultiProcess, Manager, Thread
 from ..thread import EXCEPTION, RESULT
 from Orbitool import setting
 
@@ -83,7 +83,7 @@ def test_abort():
         file = {}
         pp = abort_p(file, {"length": 60})
         notifications = []
-        pp.finished.connect(lambda t: notifications.append(t))
+        pp.result_ready.connect(lambda t: notifications.append(t))
 
         pp.start()
         # 60 * 10ms floor keeps the run in flight for ~600ms, so aborting
@@ -106,7 +106,7 @@ def test_abort():
 def test_abort_sets_flag_before_notifying():
     pp = p({}, {"length": 1})
     seen = []
-    pp.finished.connect(lambda t: seen.append(pp.aborted))
+    pp.result_ready.connect(lambda t: seen.append(pp.aborted))
     pp.abort()
     assert seen == [True]
 
@@ -114,7 +114,7 @@ def test_abort_sets_flag_before_notifying():
 def test_completion_then_abort_notifies_once():
     pp = p({}, {"length": 1})
     notifications = []
-    pp.finished.connect(lambda t: notifications.append(t))
+    pp.result_ready.connect(lambda t: notifications.append(t))
 
     pp.finished_emit((RESULT, 7))
     pp.abort()
@@ -127,7 +127,7 @@ def test_completion_then_abort_notifies_once():
 def test_abort_then_completion_notifies_once():
     pp = p({}, {"length": 1})
     notifications = []
-    pp.finished.connect(lambda t: notifications.append(t))
+    pp.result_ready.connect(lambda t: notifications.append(t))
 
     pp.abort()
     pp.finished_emit((RESULT, 7))
@@ -148,7 +148,7 @@ def test_abort_multiprocess_rollback():
         file = {}
         pp = abort_p(file, {"length": 60})
         notifications = []
-        pp.finished.connect(lambda t: notifications.append(t))
+        pp.result_ready.connect(lambda t: notifications.append(t))
 
         pp.start()
         for _ in range(500):
@@ -167,3 +167,30 @@ def test_abort_multiprocess_rollback():
     finally:
         setting.debug.NO_MULTIPROCESS = old_mp
         setting.general.multi_cores = old_cores
+
+
+def test_result_signal_no_longer_shadows_qthread_finished():
+    # the payload signal is renamed so it cannot shadow QThread.finished
+    for cls in (Thread, MultiProcess):
+        assert "finished" not in cls.__dict__, cls
+        assert "result_ready" in cls.__dict__, cls
+
+
+def test_thread_emits_result_ready_with_tuple_and_qthread_finished_fires():
+    thread = Thread(lambda: 0)
+    ready = []
+    finished = []
+    thread.result_ready.connect(lambda t: ready.append(t))
+    thread.finished.connect(lambda: finished.append(1))
+
+    thread.start()
+    thread.wait()
+    for _ in range(100):
+        app.processEvents()
+        if ready and finished:
+            break
+        QtCore.QThread.msleep(1)
+
+    assert ready == [(RESULT, 0)]
+    assert finished == [1]
+

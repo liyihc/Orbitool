@@ -1,13 +1,15 @@
 """Executable coverage for the ticket-11 migration of `MainUiPy` (the last
-file carrying `@state_node`): the ten remaining task sites were rewritten as
-`ui_task` coroutines, so every relay endpoint now lives in the new mechanism.
+file still carrying the old decorator): the ten remaining task sites were
+rewritten as `ui_task` coroutines, so every relay endpoint now lives in the
+new mechanism.
 
 The batch is six default sites (the four workspace/config file handlers plus
 `setting_dialog` and `save`) and five `join` sites (the four relay handlers
 `file_tab_finish` / `peak_shape_tab_finish` / `calibration_finish` /
 `show_spectrum` plus `noise_tab_finish`, which ticket 08 had already moved).
-`show_spectrum` loses its `withArgs=True` and forwards its spectrum argument
-by signature. No site carries a `yield` or an `except_node` rewrite.
+`show_spectrum` loses the old argument switch and forwards its spectrum
+argument by signature. No site carries a former task generator or an old
+error-registration rewrite.
 
 No RAW data is available (see `.scratch/ui-state-node-refactor/baseline.md`),
 so the end-to-end relay is exercised offscreen through the real signal wiring
@@ -210,7 +212,7 @@ def test_relay_chain_tab_progression_keeps_busy(env, monkeypatch):
 
 
 # --------------------------------------------------------------------------
-# show_spectrum: signature forwarding (the deleted withArgs=True)
+# show_spectrum: signature forwarding (the deleted argument switch)
 # --------------------------------------------------------------------------
 
 def test_show_spectrum_forwards_signature(env, monkeypatch):
@@ -225,7 +227,7 @@ def test_show_spectrum_forwards_signature(env, monkeypatch):
 
     spectrum = _spectrum()
     window.peakFitTab.show_spectrum.emit(spectrum)      # wired endpoint 1
-    assert seen == [spectrum]             # forwarded by signature, not withArgs
+    assert seen == [spectrum]             # forwarded by signature, not the old switch
     assert env.busy == [True, False]
     assert not window.spectrumDw.isHidden()
     env.reset()

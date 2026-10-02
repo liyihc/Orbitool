@@ -5,9 +5,9 @@ rewritten as ui_task coroutines.
 The batch carries two non-default mode sites (`showSeries_CatchException`
 `'e'` -> light, `rescale` `'x'` -> join), four `MultiProcess` worker steps
 (Noise `ReadFromFile` in denoise/skip, Timeserieses `CalcTimeseries` /
-`CalcSumTimeSeries`), and several `withArgs=True` slots whose arguments are
-now forwarded by signature. It is also the batch where two generator
-helpers (`Noise.readSelectedSpectrum`, `PeakShape.showPeak`,
+`CalcSumTimeSeries`), and several former argument-switch slots whose
+arguments are now forwarded by signature. It is also the batch where two
+generator helpers (`Noise.readSelectedSpectrum`, `PeakShape.showPeak`,
 `Timeserieses.showTimeseries`) became async: `showTimeseries` keeps a
 synchronous table path for `restore` (which used to drain the generator
 inline), and `MainUiPy.noise_tab_finish` was migrated in this ticket (the
@@ -150,7 +150,7 @@ def _install_valid_series(window, positions=(100.0, 101.0)):
 
 
 # --------------------------------------------------------------------------
-# Noise: default slots, signature-forwarded slots, except_node -> try/except
+# Noise: default slots, signature-forwarded slots, error recovery
 # --------------------------------------------------------------------------
 
 def test_noise_default_slot_takes_and_releases_busy(env):
@@ -170,7 +170,7 @@ def test_noise_signature_forwarded_slots(env):
     assert env.dialogs == []
     env.reset()
 
-    noise.y_times(2.0)                          # was withArgs=True
+    noise.y_times(2.0)                          # was the old argument switch
     assert env.busy == [True, False]
     assert env.dialogs == []
     env.reset()
@@ -202,7 +202,7 @@ def test_noise_add_formula_recovers_before_dialog(env, monkeypatch):
     monkeypatch.setattr(noise_module, "Formula", boom)
     noise.ui.lineEdit.setText("whatever")
 
-    noise.addFormula()                          # replaces addFormula.except_node
+    noise.addFormula()                          # replaces the old recovery hook
 
     assert [entry[0] for entry in env.timeline] == ["showNoiseFormula", "dialog"]
     assert env.dialogs == [("bad formula",)]    # str(e), once
@@ -234,7 +234,7 @@ def test_peakshape_finish_emits_callback(env):
 
 
 # --------------------------------------------------------------------------
-# Spectrum: `yield func` (msgless) -> `await background(func)`
+# Spectrum: msgless background step -> default message
 # --------------------------------------------------------------------------
 
 def test_spectrum_export_worker_and_default_message(env, tmp_path, monkeypatch):
@@ -251,12 +251,12 @@ def test_spectrum_export_worker_and_default_message(env, tmp_path, monkeypatch):
 
     assert env.dialogs == []
     assert env.busy == [True, False]
-    assert "processing" in env.msgs             # msgless yield -> default msg
+    assert "processing" in env.msgs             # msgless background -> default msg
     assert dst.exists() and dst.stat().st_size > 0
 
 
 # --------------------------------------------------------------------------
-# Timeseries: one `mode='e'` -> light
+# Timeseries: one former single-letter light site
 # --------------------------------------------------------------------------
 
 def test_timeseries_light_show_series_leaves_busy_untouched(env):
@@ -265,7 +265,7 @@ def test_timeseries_light_show_series_leaves_busy_untouched(env):
     manager.set_busy(True)
     env.busy.clear()
     try:
-        window.timeseries.showSeries_CatchException()   # was mode='e'
+        window.timeseries.showSeries_CatchException()   # was a light letter mode
         assert env.dialogs == []
         assert env.busy == []                            # light: no transition
         assert manager.busy is True
@@ -314,7 +314,7 @@ def test_timeserieses_join_rescale_starts_while_busy(env):
     manager.set_busy(True)
     env.busy.clear()
     try:
-        window.timeseriesesTab.rescale()        # was mode='x' -> join
+        window.timeseriesesTab.rescale()        # was join-mode
         assert env.dialogs == []                # not refused
         assert env.busy == []                   # busy already held -> no new edge
         assert manager.busy is True
@@ -368,7 +368,7 @@ def test_timeserieses_export_worker(env, tmp_path, monkeypatch):
     monkeypatch.setattr(
         timeserieses_module, "savefile", lambda *a, **k: (True, str(dst)))
 
-    widget.export("intensity")                  # yield func -> await background(func)
+    widget.export("intensity")                  # worker background step
 
     assert env.dialogs == []
     assert env.busy == [True, False]

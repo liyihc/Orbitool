@@ -28,7 +28,7 @@ def sleep(timeout=None):
 
 
 def wait(thread: QtCore.QThread):
-    thread.finished.connect(loop.quit)
+    thread.result_ready.connect(loop.quit)
     loop.exec()
 
 

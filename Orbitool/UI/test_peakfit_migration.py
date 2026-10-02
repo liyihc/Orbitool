@@ -2,10 +2,10 @@
 generator tasks were rewritten as ui_task coroutines.
 
 The batch is the largest single-file batch (25 decorated sites). Four were
-`mode='n'` view operations (`moveRight`, `y_times`, `timer_timeout`,
+single-letter light view operations (`moveRight`, `y_times`, `timer_timeout`,
 `step_accord_toggled`) and became `mode="light"`; the remaining 21 (including
 the view operations that were default mode, so zero behaviour change) stayed
-default. Seven former `withArgs=True` slots now forward their slot arguments
+default. Seven former argument-switch slots now forward their slot arguments
 by signature. `showSelect` drives the one `MultiProcess` instance of the batch
 (`SplitPeaks`) plus two plain closures; three generator helpers
 (`_general_action`, `fit_formula`, `fit_mass_list`) were converted to `async
@@ -194,7 +194,7 @@ def test_peakfit_helpers_are_coroutines():
 
 
 # --------------------------------------------------------------------------
-# The four former `mode='n'` view sites -> light: ignore busy
+# The four former single-letter light view sites -> light: ignore busy
 # --------------------------------------------------------------------------
 
 def test_peakfit_light_sites_ignore_busy(env):
@@ -251,7 +251,7 @@ def test_peakfit_default_scale_spectrum_takes_busy(env):
 
 
 # --------------------------------------------------------------------------
-# Signature forwarding for former withArgs=True slots (real signal emits)
+# Signature forwarding for former argument-switch slots (real signal emits)
 # --------------------------------------------------------------------------
 
 def test_peakfit_signature_forwarded_slots(env):

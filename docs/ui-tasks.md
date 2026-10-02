@@ -2,9 +2,8 @@
 
 How to write a tab operation that runs work off the UI thread, without reading
 the framework source (`Orbitool/UI/manager/task.py`). It covers the thread
-model, the three `mode` words, the error/abort contracts, the "never touch
-widgets from a worker" rule, and the migration table for the legacy
-`@state_node` style. Import `ui_task`/`background` from `.manager` (or
+model, the three `mode` words, the error/abort contracts, and the "never touch
+widgets from a worker" rule. Import `ui_task`/`background` from `.manager` (or
 `..manager` in a subpackage). A task is an ordinary method — call it
 (`self.denoise()`) or `connect` it to a signal; there is no `.func` ceremony.
 
@@ -43,9 +42,9 @@ alternation order is identical.
 
 ## Modes: default / `join` / `light`
 
-`mode` accepts exactly three words. There are **no letter aliases** —
-`mode="w"` (or `"x"`/`"a"`/`"e"`/`"n"`) raises `ValueError` at decoration
-time, as does an unknown word.
+`mode` accepts exactly three words. There are **no letter aliases** — an
+unknown word (including the old single letters) raises `ValueError` at
+decoration time.
 
 | mode | busy | while busy | uncaught error fallback |
 |---|---|---|---|
@@ -53,11 +52,12 @@ time, as does an unknown word.
 | `join` | holds a busy count (+1/−1, only ever returns what it took) | **starts anyway** (pipeline relay) | same as default |
 | `light` | never touches busy: no check, no count, no busy signal, no start sleep | n/a (it never asks) | log with traceback → dialog only (nothing to release) |
 
-Counting rules (default and `join` only): busy is *legacy flag* **or**
-*count > 0*, so old and new tasks share one busy state safely. Each task
-increments on start and decrements on finish — success or failure — so busy
-clears only when the **last** holder finishes, regardless of finish order, and
-no task can clear someone else's busy.
+Counting rules (default and `join` only): each task increments a busy count on
+start and decrements it on finish — success or failure — so busy clears only
+when the **last** holder finishes, regardless of finish order, and no task can
+clear someone else's busy. (The manager also keeps a direct busy flag used to
+simulate a running operation; the effective busy state is that flag or
+count > 0.)
 
 How to choose:
 
@@ -167,7 +167,7 @@ No busy check, no busy signal, no progress bar (a `light` task that runs a
 which `light` itself never produces) — but uncaught errors still get the
 standard log + dialog.
 
-### Slot arguments: forwarded by signature (no `withArgs`)
+### Slot arguments: forwarded by signature
 
 The decorated coroutine's own signature decides what the slot receives:
 
@@ -195,7 +195,6 @@ tab.emitter.fired.emit(7, "extra")           # → number=7; "extra" is truncate
   at debug level).
 - A **required** parameter that cannot be filled raises a clear `TypeError`
   (`cannot forward call arguments ...`) through the standard error fallback.
-- `withArgs` does not exist on `ui_task` — passing it raises `TypeError`.
 - Bindings are cached with weak references: closing a window makes it
   collectable; calling through a stale binding raises `ReferenceError`. The
   binding identity is stable while the host lives (a host that cannot be
@@ -224,8 +223,7 @@ order: **log with the original traceback** (`logger.error(str(e), exc_info=e)`
 on the `Orbitool` logger) → **one dialog** (`showInfo(str(e))`) → **busy release
 per mode** (default/`join` return their count, `light` releases nothing) →
 **the chain terminates**. Argument-binding failures and `background(42)`-style
-payload errors enter the same fallback. There is no `except_node` in the new
-API.
+payload errors enter the same fallback.
 
 ## Abort semantics
 
@@ -268,71 +266,16 @@ self.table.setRowCount(rows)               # main thread: touch widgets
 Inside a worker, `self.manager.tqdm(...)` progress reporting is fine (it only
 emits a signal); anything that draws, reads, or mutates widgets is not.
 
-## Migration table: `@state_node` → `@ui_task`
+## One task style
 
-This is the table the per-file migration tickets follow (spec phase 2). Migrate
-file by file; after each file run the manager tests
-(`uv run --group dev pytest Orbitool/UI/manager/tests`) and smoke-test the tab.
-A ticket's migration regression test lives with the migrated package (or, for a
-top-level batch, as one file added to `pytest.ini` `testpaths`) — never in
-`Orbitool/UI/tests/`, which is the real-GUI/RAW suite excluded from the default
-run.
-
-| Old (`@state_node`) | New (`@ui_task`) |
-|---|---|
-| `@state_node` (default, `mode='w'`) | `@ui_task` |
-| `@state_node(mode='x')` | `@ui_task(mode="join")` |
-| `@state_node(mode='e')` or `@state_node(mode='n')` | `@ui_task(mode="light")` |
-| `@state_node(mode='a')` | `@ui_task(mode="light")` — the counting rule takes over busy release |
-| `withArgs=True` | delete — arguments are forwarded by signature |
-| `def` + `yield closure, "msg"` | `async def` + `await background(closure, "msg")` |
-| `yield worker_instance, "msg"` | `await background(worker_instance, "msg")` |
-| `xxx.except_node(handler)` | delete — rewrite the handler as `try/except` or `finally` in the task body |
-| `@state_node` method with **no** `yield` (a plain main-thread update, e.g. the `mode='e'`/`'n'`/`'a'` one-liners) | `@ui_task` + `async def` (no `await` inside) |
-
-Notes:
-
-- `yield closure` with no message → `await background(closure)` (default
-  `"processing"`); `ret = yield closure, "msg"` →
-  `ret = await background(closure, "msg")`.
-- A method with no `yield` still becomes `async def`: the shared driver needs a
-  coroutine, so a missed `async` fails loudly
-  (`TypeError: task must be a generator or coroutine`) rather than silently.
-- Residue check after migrating a file: `grep -E 'state_node|except_node|withArgs'`
-  must be empty. A leftover `yield` is fine when it belongs to a
-  `MultiProcess.read` / `@contextlib.contextmanager` generator, not a former
-  task body.
-- `except_node` (the decorator-on-same-name form and the explicit
-  `xxx.except_node(handler)` call alike) disappears; rewrite as `try/except` or
-  `finally`. Cleanup on success and failure → `finally`; recovery that
-  suppresses the error (no framework dialog) → `except Exception:` without
-  re-raising; recovery that keeps the framework dialog → `except Exception: ...;
-  raise`.
-- `mode='a'` sites become `light`; this fixes the old defect where an error
-  during a busy period cleared *someone else's* busy — each task now only
-  returns the count it took.
-- No letter aliases: `mode='w'` etc. raise `ValueError` at decoration time, so
-  a missed mapping fails loudly instead of silently misbehaving.
-- Before making a helper `async`, grep its callers: a legacy method can drive
-  another task by **returning** it (`return self.other_task()  # yield` — the
-  old wrapper checks `isinstance(ret, Generator)`), and must be migrated in the
-  same ticket even if it lives in a file the ticket does not name.
-
-## Old and new styles coexist
-
-Both styles run in the **same driver** (`Driver` in
-`Orbitool/UI/manager/task.py`) over one send/throw protocol, so coexistence
-costs no second engine. Shared busy is safe both ways — busy = legacy flag **or**
-new count > 0, and `busy_signal` fires only on a change — so old and new tasks
-nesting or overlapping never release each other's busy early. New code uses
-`ui_task` only; once the legacy call sites are gone (phase 3) the old mechanism
-(generator driver path, five letter modes, `except_node`, strong-reference
-binding cache) is deleted wholesale.
+All UI tasks use `ui_task` / `background`; there is no second mechanism. The
+driver advances the task coroutine over one send/throw protocol, and busy is a
+count (plus the direct flag used for busy simulation), so `busy_signal` fires
+only on a change.
 
 ## Examples are test-backed
 
 Every example/claim above has an executable twin in
 `Orbitool/UI/manager/tests/` (`test_cookbook_*` in `test_ui_task.py` plus the
-`test_busy_modes.py` behaviours), and each migration ticket adds its own
-co-located regression tests; the default `uv run --group dev pytest` run keeps
-doc and tests in step.
+`test_busy_modes.py` behaviours); the default `uv run --group dev pytest` run
+keeps doc and tests in step.

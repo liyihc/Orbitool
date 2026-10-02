@@ -68,9 +68,10 @@ class Manager(QObject):
 
     def set_busy(self, busy: bool):
         """
-        Legacy flag setter (state_node path): sets/clears the flag only,
-        the ui_task count stays untouched. busy_signal fires only when
-        the effective busy (flag or count > 0) actually changes.
+        Direct busy-flag setter: sets/clears the flag only, the ui_task
+        count stays untouched. Used to simulate a running operation.
+        busy_signal fires only when the effective busy (flag or count > 0)
+        actually changes.
         """
         if busy ^ self._busy:
             was_busy = self.busy
@@ -229,7 +230,7 @@ class MySignal(Generic[T]):
     def emit(self, *args, **kwargs):
         # emit; one failing handler must not prevent the others from running.
         # handlers live in a set, so which error propagates first is arbitrary;
-        # the propagated one goes to the caller (a state_node logs it, an
+        # the propagated one goes to the caller (a task logs it, an
         # unguarded caller surfaces it to the top-level exception handler)
         first_error = None
         for handler in list(self.handlers):

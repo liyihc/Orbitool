@@ -1,7 +1,6 @@
 import logging
 import threading
 from collections import deque
-from enum import Enum
 from multiprocessing import Pool
 from multiprocessing.pool import AsyncResult
 from queue import Queue
@@ -17,20 +16,15 @@ from . import manager
 
 logger = logging.getLogger("Orbitool")
 
-# finished-signal payload channel: (RESULT, value) or (EXCEPTION, exception).
+# result-signal payload channel: (RESULT, value) or (EXCEPTION, exception).
 # Receivers dispatch on the tag, never on the payload's truthiness, so falsy
 # values (0 / empty tuple / None) round-trip untouched.
 RESULT = "result"
 EXCEPTION = "exception"
 
 
-class threadtype(Enum):
-    thread = 0
-    multiprocess = 1
-
-
 class Thread(QtCore.QThread):
-    finished = QtCore.pyqtSignal(tuple)
+    result_ready = QtCore.pyqtSignal(tuple)
 
     def __init__(self, func, args=(), kwargs={}) -> None:
         super().__init__()
@@ -45,7 +39,7 @@ class Thread(QtCore.QThread):
             self.result = (RESULT, result)
         except Exception as e:
             self.result = (EXCEPTION, e)
-        self.finished.emit(self.result)
+        self.result_ready.emit(self.result)
 
     def set_tqdmer(self, tqdmer: manager.TQDMER):
         pass
@@ -62,7 +56,7 @@ def init_process(main_setting: _Setting):
     setting.update_from(main_setting)
 
 class MultiProcess(QtCore.QThread, Generic[Data, Result]):
-    finished = QtCore.pyqtSignal(tuple)
+    result_ready = QtCore.pyqtSignal(tuple)
 
     @final
     def __init__(self, file, read_kwargs: dict = None, func_kwargs: dict = None, write_kwargs: dict = None) -> None:
@@ -93,7 +87,7 @@ class MultiProcess(QtCore.QThread, Generic[Data, Result]):
                 logger.error(
                     "finished notification already sent, suppressed", exc_info=exc)
             return
-        self.finished.emit(t)
+        self.result_ready.emit(t)
 
     @final
     def set_tqdmer(self, tqdmer: manager.TQDMER):

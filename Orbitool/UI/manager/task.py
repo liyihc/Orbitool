@@ -51,19 +51,17 @@ def background(work: Any, msg: str = "processing") -> Step:
 
 class Driver:
     """
-    Shared engine for both task styles: advances a legacy generator
-    (`yield` payload style) or a coroutine (`await background(...)` style)
-    through the same send/throw protocol, launching each yielded step on a
-    worker thread and resuming on the main thread.
+    Coroutine driver: advances a `ui_task` coroutine through the
+    send/throw protocol, launching each awaited `background(...)` step on
+    a worker thread and resuming on the main thread.
     """
     def __init__(self, container: Any, *, manager: Manager,
                  on_done: Callable[[], None],
                  on_error: Callable[[BaseException], None]) -> None:
-        if not (hasattr(container, "send") and hasattr(container, "throw")):
+        if not inspect.iscoroutine(container):
             raise TypeError(
-                f"task must be a generator or coroutine, got {container!r}")
+                f"task must be a coroutine, got {container!r}")
         self.container = container
-        self.is_coroutine = inspect.iscoroutine(container)
         self.manager = manager
         self.on_done = on_done
         self.on_error = on_error
@@ -92,27 +90,24 @@ class Driver:
         channel, value = payload[0], payload[1]
         if channel != EXCEPTION:
             self._advance(value, None)
-        elif self.is_coroutine:
-            self._advance(None, value)
         else:
-            self._fail(value)
+            self._advance(None, value)
 
     def _launch(self, yielded: Any) -> None:
-        if self.is_coroutine:
-            if not isinstance(yielded, Step):
-                raise TypeError(
-                    "only background(...) steps can be awaited,"
-                    f" got {yielded!r}")
-            work, msg = yielded.work, yielded.msg
-        elif isinstance(yielded, tuple):
-            work, msg = yielded
-        else:
-            work, msg = yielded, "processing"
+        if not isinstance(yielded, Step):
+            raise TypeError(
+                "only background(...) steps can be awaited,"
+                f" got {yielded!r}")
+        work, msg = yielded.work, yielded.msg
         manager = self.manager
         manager.msg.emit(msg)
         thread = work if isinstance(work, QtCore.QThread) else Thread(work)
         thread.set_tqdmer(manager.tqdm)
-        thread.finished.connect(self._deliver)
+        if setting.debug.thread_block_gui:
+            thread.result_ready.connect(self._deliver)  # inline, same thread
+        else:
+            thread.result_ready.connect(
+                self._deliver, QtCore.Qt.ConnectionType.QueuedConnection)
         manager.running_thread = thread
         if setting.debug.thread_block_gui:
             thread.run()
@@ -205,7 +200,7 @@ class ui_task:
     decorated coroutine's own signature — excess positional arguments
     are truncated, extra keywords are dropped unless `**kwargs` absorbs
     them, and an unbindable required parameter raises through the
-    uniform error fallback — so there is no `withArgs` switch. Method
+    uniform error fallback — so no argument switch is needed. Method
     binding is cached with weak references, so closed hosts can be
     garbage collected. `mode` accepts exactly three words (no letter aliases):
 

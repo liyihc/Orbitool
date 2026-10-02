@@ -2,9 +2,9 @@
 MassList, SpectraList, PeakList, MassDefect): the legacy generator tasks
 were rewritten as ui_task coroutines.
 
-The batch is the one that carries the five old `mode='a'` sites in the
-Formula panel; `mode='a'` used to *reset* busy on completion, which could
-clear a busy held by someone else. They map to `light` (never touch busy),
+The batch is the one that carries the five old `a`-mode sites in the
+Formula panel; that reset-on-completion mode used to clear a busy held by
+someone else. They map to `light` (never touch busy),
 so the tests pin that a light call during busy leaves the other holder's
 busy intact.
 
@@ -13,8 +13,7 @@ No RAW data is available, so file dialogs are answered through
 main window is built offscreen. `thread_block_gui` makes workers run
 inline for deterministic busy edges.
 
-Placed next to the dominant subpackage of the batch (see the migration
-section of `docs/ui-tasks.md`).
+Placed next to the dominant subpackage of the batch (see `docs/ui-tasks.md`).
 """
 import importlib
 
@@ -92,12 +91,12 @@ def reset_state(env):
 
 
 # --------------------------------------------------------------------------
-# Formula panel: five old `mode='a'` sites -> light
+# Formula panel: five old reset-mode sites -> light
 # --------------------------------------------------------------------------
 
 def test_formula_light_sites_leave_other_busy_untouched(env):
-    # this is the defect the migration fixes: mode='a' used to reset busy
-    # on completion and could clear a holder's busy; light must not
+    # this is the defect the migration fixes: the old reset mode would
+    # clear busy on completion and could wipe a holder's busy; light must not
     formula = env.window.formula
     manager = env.window.manager
     manager.set_busy(True)
@@ -121,7 +120,7 @@ def test_formula_light_item_clicked_forwards_signal_args(env):
 
     item = formula.ui.elementTableWidget.item(0, 3)
     assert item is not None
-    formula.ui.elementTableWidget.itemClicked.emit(item)   # was withArgs
+    formula.ui.elementTableWidget.itemClicked.emit(item)   # was the old argument switch
 
     assert env.dialogs == []
     assert env.busy == []        # light
@@ -129,7 +128,7 @@ def test_formula_light_item_clicked_forwards_signal_args(env):
 
 
 def test_formula_light_isotope_clicked_forwards_signal_args(env):
-    # the fifth former mode='a' site: emitting the real itemClicked signal
+    # the fifth former reset-mode site: emitting the real itemClicked signal
     # forwards (item, column) and must not touch a held busy
     formula = env.window.formula
     manager = env.window.manager
@@ -181,7 +180,7 @@ def test_formula_calc_opens_result_window(env, monkeypatch):
 
 
 # --------------------------------------------------------------------------
-# FormulaResultWindow: `mode='x'` -> join
+# FormulaResultWindow: old relay mode -> join
 # --------------------------------------------------------------------------
 
 def test_formula_result_join_starts_while_busy(env):
@@ -209,7 +208,7 @@ def test_formula_result_join_starts_while_busy(env):
 def test_masslist_light_and_default_modes(env):
     masslist = env.window.masslist
 
-    masslist.showMassList_CatchException()      # was mode='e' -> light
+    masslist.showMassList_CatchException()      # was a light letter mode
     assert env.busy == []
 
     masslist.updateRtol()                       # default
@@ -230,7 +229,7 @@ def test_masslist_import_and_export_background(env, tmp_path):
     src.write_text("position,formulas\n100.0,CH4\n")
     env.reset()
     uitest.input((True, str(src)))
-    masslist.import_masslist()                  # yield -> await background
+    masslist.import_masslist()                  # worker background step
     assert env.dialogs == []
     assert env.busy == [True, False]
     assert len(masslist.info.masslist) == 1
@@ -238,7 +237,7 @@ def test_masslist_import_and_export_background(env, tmp_path):
     dst = tmp_path / "out.csv"
     env.reset()
     uitest.input((True, str(dst)))
-    masslist.export()                           # yield -> await background
+    masslist.export()                           # worker background step
     assert env.dialogs == []
     assert env.busy == [True, False]
     assert dst.exists() and dst.stat().st_size > 0
@@ -251,16 +250,16 @@ def test_masslist_import_and_export_background(env, tmp_path):
 def test_spectralist_light_combo_and_export_worker(env, tmp_path, monkeypatch):
     spectra = env.window.spectraList
 
-    spectra.comboBox_changed()                  # was mode='e' -> light
+    spectra.comboBox_changed()                  # was a light letter mode
     assert env.busy == []
 
     monkeypatch.setattr(spectra_module.os, "startfile", lambda *a: None)
     env.reset()
     uitest.input((True, str(tmp_path)))
-    spectra.export("select")                    # yield -> await background
+    spectra.export("select")                    # worker background step
     assert env.dialogs == []
     assert env.busy == [True, False]
-    assert "processing" in env.msgs             # msgless yield -> default msg
+    assert "processing" in env.msgs             # msgless background -> default msg
 
 
 # --------------------------------------------------------------------------
@@ -270,11 +269,11 @@ def test_spectralist_light_combo_and_export_worker(env, tmp_path, monkeypatch):
 def test_peaklist_light_and_default_modes(env):
     peaklist = env.window.peakList
 
-    peaklist.scrolled(0)                        # was mode='n' -> light
+    peaklist.scrolled(0)                        # was a light letter mode
     assert env.busy == []
 
     env.reset()
-    peaklist.goto_mass()                        # default (was withArgs-less)
+    peaklist.goto_mass()                        # default (was argument-less)
     assert env.busy == [True, False]
     assert env.dialogs == []
 
@@ -286,7 +285,7 @@ def test_peaklist_light_and_default_modes(env):
 def test_massdefect_light_and_default_modes(env, monkeypatch):
     massdefect = env.window.massDefectTab
 
-    massdefect.replot()                         # was mode='n' -> light
+    massdefect.replot()                         # was a light letter mode
     assert env.busy == []
 
     env.reset()

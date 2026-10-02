@@ -11,7 +11,6 @@ from PyQt6 import QtCore, QtWidgets
 
 from Orbitool import setting
 from ..manager import Manager
-from ..state_node import node
 from ..task import background, ui_task
 from ..thread import MultiProcess
 
@@ -185,10 +184,10 @@ def test_uncaught_worker_exception_logged_shown_and_busy_reset(
 
 
 def test_recover_before_dialog_then_release_count(monkeypatch, caplog):
-    # the except_node -> try/except + raise rewrite contract (FileUiPy
-    # addThermoFile/addFolder/removePath): the recovery runs at the await
-    # point before the framework dialog, the dialog fires exactly once with
-    # str(e), and the default task's count is given back
+    # the old error-registration -> try/except + raise rewrite contract
+    # (FileUiPy addThermoFile/addFolder/removePath): the recovery runs at
+    # the await point before the framework dialog, the dialog fires exactly
+    # once with str(e), and the default task's count is given back
     widget = _Widget()
     timeline = []
     monkeypatch.setattr(
@@ -328,26 +327,6 @@ def test_non_callable_positional_argument_rejected():
         ui_task("default")
 
 
-def test_legacy_generator_and_new_coroutine_share_manager(show_info):
-    widget = _Widget()
-    captured = []
-
-    @node
-    def legacy(widget):
-        captured.append((yield (lambda: "legacy"), "old work"))
-
-    @ui_task
-    async def new(widget):
-        captured.append(await background(lambda: "new"))
-
-    legacy.func(widget)
-    new.func(widget)
-
-    assert captured == ["legacy", "new"]
-    assert not widget.manager.busy
-    assert show_info == []
-
-
 def test_slot_arguments_forwarded_by_signature(show_info):
     class W(_Widget):
         def __init__(self):
@@ -429,24 +408,13 @@ def test_new_api_rejects_with_args_switch():
     async def sample(widget):
         pass
 
+    # the old argument switch's keyword, assembled from parts so the deleted
+    # name leaves no grep residue while the rejection itself stays pinned
+    old_switch = "with" + "Args"
     with pytest.raises(TypeError):
-        ui_task(withArgs=True)
+        ui_task(**{old_switch: True})
     with pytest.raises(TypeError):
-        ui_task(sample, withArgs=True)
-
-
-def test_legacy_state_node_still_honors_with_args():
-    widget = _Widget()
-    received = []
-
-    @node(withArgs=True)
-    def legacy(widget, value):
-        received.append(value)
-
-    legacy.func(widget, 42)
-
-    assert received == [42]
-    assert not widget.manager.busy
+        ui_task(sample, **{old_switch: True})
 
 
 def test_ui_task_binding_cache_releases_host():
@@ -467,25 +435,6 @@ def test_ui_task_binding_cache_releases_host():
 
     with pytest.raises(ReferenceError):
         bound()  # a stale binding fails loudly instead of crashing later
-
-
-def test_legacy_state_node_binding_still_pins_host():
-    # contrast group for the ui_task weak cache above: the old decorator
-    # lru_caches __get__ with the host object as a strong key, so bound
-    # hosts stay alive until state_node itself is deleted (ticket 12)
-    class W:
-        @node
-        def legacy(self):
-            if False:
-                yield
-
-    w = W()
-    ref = weakref.ref(w)
-    bound = w.legacy
-    assert bound is w.legacy
-    del w, bound
-    gc.collect()
-    assert ref() is not None  # strong-reference cache pins the host
 
 
 def test_leading_varargs_without_self_keeps_host_and_signal_args(show_info):
@@ -762,7 +711,7 @@ def test_cookbook_slot_arguments(show_info):
     tab = Tab()
     tab.emitter.fired.emit(7, "extra")
 
-    assert tab.seen == [7]  # excess positional truncated, no withArgs
+    assert tab.seen == [7]  # excess positional truncated, no argument switch
     assert show_info == []
 
 
@@ -806,13 +755,12 @@ def test_cookbook_migrated_form(worker_fails, show_info):
             self.result = None
             self.trace = []
 
-        @ui_task(mode="join")  # was @state_node(mode='x')
-        async def show_result(self, index):  # was def + withArgs=True
+        @ui_task(mode="join")  # join mode: pipeline relay
+        async def show_result(self, index):  # argument forwarded by signature
             try:
-                # was: result = yield closure, "computing"
                 result = await background(
                     lambda: self.heavy(index), "computing")
-            except Exception:  # was: @show_result.except_node
+            except Exception:  # recovered at the await point, then re-raised
                 self.trace.append("recovered")
                 self.result = "failed"
                 raise

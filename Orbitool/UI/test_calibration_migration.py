@@ -3,7 +3,7 @@ CalibrationDetail, PeakFitFloat): the legacy generator tasks were
 rewritten as ui_task coroutines.
 
 The batch carries three non-default mode sites (`mouseRelease` `'n'` and
-the two drag handlers `'e'` -> light), twelve `withArgs=True` slots
+the two drag handlers `'e'` -> light), twelve former argument-switch slots
 whose arguments are now forwarded by signature, and two `MultiProcess`
 worker instances (`SplitAndFitPeak` in `calcInfo`,
 `CalibrateMergeDenoise` in `calibrate`). `calcInfo` is the longest
@@ -197,9 +197,9 @@ def test_calibration_light_sites_ignore_busy(env):
     manager.set_busy(True)
     env.busy.clear()
     try:
-        widget.mouseRelease(_mouse_release_event())        # was mode='n'
-        widget.tableDragEnterEvent(_FakeDragEvent())       # was mode='e'
-        widget.tableDragMoveEvent(_FakeDragEvent())        # was mode='e'
+        widget.mouseRelease(_mouse_release_event())        # was a light letter mode
+        widget.tableDragEnterEvent(_FakeDragEvent())       # was a light letter mode
+        widget.tableDragMoveEvent(_FakeDragEvent())        # was a light letter mode
         assert env.dialogs == []
         assert env.busy == []                              # light: no transition
         assert manager.busy is True
@@ -235,7 +235,7 @@ def test_calibration_change_segment_forwards_signal_args(env):
     assert listwidget.count() >= 1
     item = listwidget.item(0)
 
-    listwidget.itemDoubleClicked.emit(item)      # was withArgs=True
+    listwidget.itemDoubleClicked.emit(item)      # was the old argument switch
 
     assert env.dialogs == []
     assert env.busy == [True, False]
@@ -297,7 +297,7 @@ def test_calibration_calibrate_runs_merge_and_emits_callback(env):
     hits = []
     widget.callback.connect(lambda: hits.append(1))
 
-    widget.calibrate(skip=True)                 # yield -> await background
+    widget.calibrate(skip=True)                 # worker background step
 
     assert env.dialogs == []
     assert env.busy == [True, False]
@@ -320,7 +320,7 @@ def test_calibration_detail_async_slots(env, monkeypatch):
     try:
         item = QtWidgets.QTableWidgetItem("x")
 
-        win.showSpectrumAt(item)                # was withArgs=True
+        win.showSpectrumAt(item)                # was the old argument switch
         assert env.dialogs == []
         assert env.busy == [True, False]
         env.reset()

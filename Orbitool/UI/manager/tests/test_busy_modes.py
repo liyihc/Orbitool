@@ -8,14 +8,12 @@ from PyQt6 import QtCore, QtWidgets
 
 from Orbitool import setting
 from ..manager import Manager
-from ..state_node import node
 from ..task import background, ui_task
 
 task_module = importlib.import_module("Orbitool.UI.manager.task")
-state_node_module = importlib.import_module("Orbitool.UI.manager.state_node")
 
 # a QApplication with no references gets destroyed, breaking every event
-# loop that runs afterwards (state_node's / ui_task's busy sleep)
+# loop that runs afterwards (each task's busy sleep)
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
@@ -36,15 +34,6 @@ def show_info(monkeypatch):
     calls = []
     monkeypatch.setattr(
         task_module, "showInfo",
-        lambda *args, **kwargs: calls.append(args))
-    return calls
-
-
-@pytest.fixture
-def show_node_info(monkeypatch):
-    calls = []
-    monkeypatch.setattr(
-        state_node_module, "showInfo",
         lambda *args, **kwargs: calls.append(args))
     return calls
 
@@ -309,181 +298,3 @@ def test_nested_outer_finishes_first_busy_held_until_inner_finishes(
     assert events == [True, False]
     assert show_info == []
 
-
-def test_old_task_and_new_join_hold_busy_until_both_finish(
-        show_info, show_node_info, held_threads, monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
-    widget = _Widget()
-    events = []
-    widget.manager.busy_signal.connect(events.append)
-    release_old = threading.Event()
-    release_join = threading.Event()
-    old_finished = threading.Event()
-    join_finished = threading.Event()
-    old_seen = []
-    join_seen = []
-
-    @node
-    def old_task(widget):
-        yield lambda: release_old.wait(5), "old work"
-        old_seen.append(widget.manager.busy)
-        old_finished.set()
-
-    @ui_task(mode="join")
-    async def join_task(widget):
-        await background(lambda: release_join.wait(5), "new work")
-        join_seen.append(widget.manager.busy)
-        join_finished.set()
-
-    old_task.func(widget)
-    assert widget.manager.busy
-
-    join_task.func(widget)
-    assert widget.manager.busy
-    assert events == [True]
-
-    release_old.set()
-    _wait_until(old_finished.is_set)
-    assert old_seen == [True]
-    assert widget.manager.busy
-    assert events == [True]
-
-    release_join.set()
-    _wait_until(lambda: join_finished.is_set() and not widget.manager.busy)
-    assert join_seen == [True]
-    assert events == [True, False]
-    assert show_info == []
-    assert show_node_info == []
-
-
-def test_new_default_refused_while_old_task_running(
-        show_info, show_node_info, held_threads, monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
-    widget = _Widget()
-    release = threading.Event()
-    old_finished = threading.Event()
-    new_ran = []
-
-    @node
-    def old_task(widget):
-        yield lambda: release.wait(5), "old work"
-        old_finished.set()
-
-    @ui_task
-    async def new_task(widget):
-        new_ran.append(True)
-
-    old_task.func(widget)
-    new_task.func(widget)
-
-    assert new_ran == []
-    assert show_info == [("Wait for process", 'busy')]
-    assert widget.manager.busy
-
-    release.set()
-    _wait_until(lambda: old_finished.is_set() and not widget.manager.busy)
-    assert show_info == [("Wait for process", 'busy')]
-    assert show_node_info == []
-
-
-def test_old_default_refused_while_new_task_running(
-        show_info, show_node_info, held_threads, monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
-    widget = _Widget()
-    release = threading.Event()
-    new_finished = threading.Event()
-    old_ran = []
-
-    @ui_task
-    async def new_task(widget):
-        await background(lambda: release.wait(5), "new work")
-        new_finished.set()
-
-    @node
-    def old_task(widget):
-        old_ran.append(True)
-
-    new_task.func(widget)
-    old_task.func(widget)
-
-    assert old_ran == []
-    assert show_node_info == [("Wait for process", 'busy')]
-    assert show_info == []
-    assert widget.manager.busy
-
-    release.set()
-    _wait_until(lambda: new_finished.is_set() and not widget.manager.busy)
-    assert show_node_info == [("Wait for process", 'busy')]
-
-
-def test_light_during_old_task_leaves_busy_signal_untouched(
-        show_info, show_node_info, held_threads, monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
-    widget = _Widget()
-    events = []
-    widget.manager.busy_signal.connect(events.append)
-    release = threading.Event()
-    old_finished = threading.Event()
-    light_finished = threading.Event()
-    light_seen = []
-
-    @node
-    def old_task(widget):
-        yield lambda: release.wait(5), "old work"
-        old_finished.set()
-
-    @ui_task(mode="light")
-    async def light_task(widget):
-        light_seen.append(widget.manager.busy)
-        await background(lambda: "light work")
-        light_finished.set()
-
-    old_task.func(widget)
-    assert widget.manager.busy
-
-    light_task.func(widget)
-    _wait_until(light_finished.is_set)
-
-    assert light_seen == [True]
-    assert widget.manager.busy
-    assert events == [True]
-    assert show_info == []
-    assert show_node_info == []
-
-    release.set()
-    _wait_until(lambda: old_finished.is_set() and not widget.manager.busy)
-    assert events == [True, False]
-
-
-def test_join_error_keeps_busy_held_by_old_task(
-        show_info, show_node_info, held_threads, monkeypatch):
-    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
-    widget = _Widget()
-    events = []
-    widget.manager.busy_signal.connect(events.append)
-    release = threading.Event()
-    old_finished = threading.Event()
-
-    @node
-    def old_task(widget):
-        yield lambda: release.wait(5), "old work"
-        old_finished.set()
-
-    @ui_task(mode="join")
-    async def join_task(widget):
-        await background(worker_boom, "work")
-
-    old_task.func(widget)
-    assert widget.manager.busy
-
-    join_task.func(widget)
-    _wait_until(lambda: len(show_info) >= 1)
-
-    assert show_info == [("boom from worker",)]
-    assert widget.manager.busy
-    assert events == [True]
-
-    release.set()
-    _wait_until(lambda: old_finished.is_set() and not widget.manager.busy)
-    assert events == [True, False]
-    assert show_node_info == []
