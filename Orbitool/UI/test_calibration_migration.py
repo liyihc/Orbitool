@@ -61,6 +61,12 @@ def _spectrum(path="none:"):
         path=path, start_time=_START, end_time=_START + timedelta(minutes=1))
 
 
+def _file_spectrum_info(path="none:"):
+    return FileSpectrumInfo(
+        start_time=_START, end_time=_START + timedelta(minutes=1),
+        path=path, filter={}, stats_filter={}, average_index=0)
+
+
 def _mouse_release_event():
     return QtGui.QMouseEvent(
         QtCore.QEvent.Type.MouseButtonRelease,
@@ -236,9 +242,7 @@ def test_calibration_calibrate_runs_merge_and_emits_callback(env):
     widget = window.calibrationTab
     noise_info = window.manager.workspace.info.noise_tab
     noise_info.skip = True
-    noise_info.denoised_spectrum_infos = [FileSpectrumInfo(
-        start_time=_START, end_time=_START + timedelta(minutes=1),
-        path="none:", filter={}, stats_filter={}, average_index=0)]
+    noise_info.denoised_spectrum_infos = [_file_spectrum_info()]
     window.manager.workspace.data.raw_spectra.clear()
     window.manager.workspace.data.raw_spectra.append(_spectrum())
 
@@ -254,6 +258,67 @@ def test_calibration_calibrate_runs_merge_and_emits_callback(env):
     info = window.manager.workspace.info.calibration_tab
     assert len(info.calibrated_spectrum_infos) == 1
     assert len(window.manager.workspace.data.calibrated_spectra) == 1
+
+
+def test_calibration_calibrate_without_info_is_blocked(env):
+    window = env.window
+    widget = window.calibrationTab
+    noise_info = window.manager.workspace.info.noise_tab
+    noise_info.denoised_spectrum_infos = [_file_spectrum_info()]
+    widget.info.calibrator_segments.clear()
+
+    hits = []
+    widget.callback.connect(lambda: hits.append(1))
+
+    widget.calibrate(skip=False)
+
+    assert env.dialogs == [("please calculate calibration info first",)]
+    assert env.msgs == []
+    assert hits == []
+    assert not window.manager.busy
+
+
+def test_calibration_calibrate_after_calc_without_ions_is_blocked(env):
+    window = env.window
+    widget = window.calibrationTab
+    info = widget.info
+    info.ions = []
+    info.last_ions = []
+    info.path_ion_infos.clear()
+
+    widget.calcInfo()
+    assert info.calibrator_segments == {}
+    env.reset()
+
+    window.manager.workspace.info.noise_tab.denoised_spectrum_infos = [
+        _file_spectrum_info()]
+
+    widget.calibrate(skip=False)
+
+    assert env.dialogs == [("please calculate calibration info first",)]
+    assert env.msgs == []
+
+
+def test_calibration_calibrate_without_denoise_is_blocked(env):
+    window = env.window
+    widget = window.calibrationTab
+    window.manager.workspace.info.noise_tab.denoised_spectrum_infos = []
+
+    hits = []
+    widget.callback.connect(lambda: hits.append(1))
+
+    widget.calibrate(skip=False)
+    assert env.dialogs == [("please denoise first",)]
+    assert env.msgs == []
+    assert hits == []
+    assert not window.manager.busy
+    env.reset()
+
+    widget.calibrate(skip=True)
+    assert env.dialogs == [("please denoise first",)]
+    assert env.msgs == []
+    assert hits == []
+    assert not window.manager.busy
 
 
 # --------------------------------------------------------------------------

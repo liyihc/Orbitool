@@ -360,8 +360,15 @@ class Widget(QtWidgets.QWidget):
     @ui_task
     async def calibrate(self, skip: bool):
         workspace = self.manager.workspace
-        rtol = workspace.info.file_tab.rtol
+        info = self.info
         noise_info = workspace.info.noise_tab
+        if not noise_info.denoised_spectrum_infos:
+            showInfo("please denoise first")
+            return
+        if not skip and not info.calibrator_segments:
+            showInfo("please calculate calibration info first")
+            return
+        rtol = workspace.info.file_tab.rtol
         noise_skip = noise_info.skip
         setting = noise_info.general_setting
         result = noise_info.general_result
@@ -493,6 +500,8 @@ class CalibrateMergeDenoise(MultiProcess):
              quantile: float, mass_dependent: bool, n_sigma: bool,
              dependent: bool, points: np.ndarray, deltas: np.ndarray,
              params: np.ndarray, subtract: bool, poly_coef: np.ndarray, std: float) -> Spectrum:
+        if not data:
+            raise ValueError("no denoised spectra to calibrate")
         spectra = []
         paths = set()
         start_times = []
@@ -500,6 +509,9 @@ class CalibrateMergeDenoise(MultiProcess):
         calibrator: Calibrator
         for spectrum, separators, calibrators in data:
             if not calibrate_skip:
+                if calibrators is None:
+                    raise ValueError(
+                        f"no calibration info for path {spectrum.path}")
                 mz = []
                 for mz_part, calibrator in zip(spectrum_func.safeSplitSpectrum(spectrum.mz, spectrum.intensity, separators), calibrators):
                     mz.append(calibrator.calibrate_mz(mz_part))
