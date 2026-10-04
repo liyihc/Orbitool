@@ -8,7 +8,7 @@ contributions from research institutions in China, France, and Finland.
 
 ## Development commands
 
-Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/development.md`.
+Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/dev/development.md`.
 
 ## Repository layout
 
@@ -16,14 +16,16 @@ Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/development.md`.
   (domain logic: formula, spectrum, peakfit, calibration, workspace), `UI/` (PyQt6
   interface), `utils/` (runtime utilities, Thermo RAW readers)
 - `utils/` — build/dev tooling (pyuic, Cython setup); unrelated to `Orbitool/utils/`
-- `notebooks/` — experiments · `resources/` — icons · `docs/` — documentation
+- `notebooks/` — experiments · `resources/` — icons
+- `docs/` — documentation: `guide/` (user manual, entry point
+  `docs/guide/index.md`), `dev/` (development + build), `agents/` (agent skill docs)
 - `CONTEXT.md` / `docs/adr/` may not exist yet — see `docs/agents/domain.md`
 
 ## Notes
 
 - Fresh clone has no compiled Cython extensions: run
   `uv run --group build python util.py setup` first (requires a C++ toolchain —
-  MinGW-w64 or MSVC, see `docs/build-environment.md`), or imports and tests fail
+  MinGW-w64 or MSVC, see `docs/dev/build-environment.md`), or imports and tests fail
 - Do not edit generated `*Ui.py` / `*Ui.Py` files (header says "Do not edit"); edit the
   `*.ui` source and run `util.py pyuic`; application logic lives in `*UiPy.py`
 - Several generated UI files end in uppercase `.Py`; imports only work on
@@ -41,11 +43,13 @@ Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/development.md`.
 - Run the suite with `uv run --group dev pytest` and judge it by the exit code
   (`$LASTEXITCODE`); never pipe it through `Select-Object -Last N` or similar —
   that hides failure tracebacks, and the command runner already captures full output
-- Code and docs land together: when a change alters a command, workflow, layout, or
-  behavior that `docs/`, `readme.md`, or `CONTEXT.md`/`docs/adr/` describes, update
-  that doc in the same change
+- Code and docs land together: whenever you change code, update every doc that the
+  change makes stale. A behavior work-flow change touches `docs/guide/`; a
+  command/build change touches `docs/dev/`; user-visible changes get a
+  `CHANGELOG.md` entry. Also update `readme.md` or `CONTEXT.md`/`docs/adr/` when
+  they describe what changed — in the same change
 - Writing tab background operations (`ui_task` / `background`, mode words, error and
-  abort contracts): see `docs/ui-tasks.md`
+  abort contracts): see `docs/dev/ui-tasks.md`
 
 ## Agent skills
 

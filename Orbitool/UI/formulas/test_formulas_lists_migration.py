@@ -13,7 +13,7 @@ No RAW data is available, so file dialogs are answered through
 main window is built offscreen. `thread_block_gui` makes workers run
 inline for deterministic busy edges.
 
-Placed next to the dominant subpackage of the batch (see `docs/ui-tasks.md`).
+Placed next to the dominant subpackage of the batch (see `docs/dev/ui-tasks.md`).
 """
 import importlib
 

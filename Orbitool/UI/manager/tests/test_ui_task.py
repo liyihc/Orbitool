@@ -559,7 +559,7 @@ def test_signal_connect_truncates_and_disconnects_by_identity(show_info):
     assert w.seen == [7]
 
 
-# cookbook twins: every code example in docs/ui-tasks.md has an executable
+# cookbook twins: every code example in docs/dev/ui-tasks.md has an executable
 # assertion here so the cookbook cannot drift from the API (ticket 05)
 
 

@@ -20,9 +20,9 @@ Two options:
        winget install --id Microsoft.VisualStudio.2022.BuildTools -e \\
          --accept-source-agreements --accept-package-agreements \\
          --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-     (details: docs/build-environment.md)
+     (details: docs/dev/build-environment.md)
   2. Use MinGW-w64 instead: set "mingw_dir" in build-config.json
-     (details: docs/build-environment.md)
+     (details: docs/dev/build-environment.md)
 =================================================================="""
 
 
