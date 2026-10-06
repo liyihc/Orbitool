@@ -34,9 +34,7 @@ def wait(thread: QtCore.QThread):
 
 def load_settings():
     """apply setting.json (same as Main.py) so test_data_path/test_timeout can be configured"""
-    if config.config_path.exists():
-        setting.update_from(
-            setting.model_validate_json(config.config_path.read_text()))
+    setting.load_setting()
 
 
 def init(window: MainUiPy.Window):

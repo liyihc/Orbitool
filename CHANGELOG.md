@@ -20,6 +20,12 @@ on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   workers are kept referenced until Qt reports them finished, so a step that starts
   the next worker from its result no longer destroys a still-running `QThread`
   (`QThread: Destroyed while thread '' is still running`, seen after **Denoise**).
+- The packaged release no longer ships `StartOrbitool.bat`; run
+  `Orbitool/Orbitool.exe` directly. `setting.json` and `log.txt` are now written
+  next to that executable — outside the `_internal` folder PyInstaller 6 uses for
+  bundled dependencies — so they stay where the readme says they are. A
+  `setting.json` left inside `_internal` by an older build is read once and
+  migrated to the new location, so settings survive the upgrade.
 
 ### Added
 

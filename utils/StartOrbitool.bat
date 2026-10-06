@@ -1,1 +1,0 @@
-start /b ./Orbitool/Orbitool.exe

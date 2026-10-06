@@ -21,6 +21,8 @@ log.txt.*
 *.wks
 *.Oribit*
 *.Orbit*
+*.orbt-temp
+*.orbt-tmp
 *.pdf
 *.c
 *.cpp

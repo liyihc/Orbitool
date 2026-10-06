@@ -22,12 +22,10 @@ try:
         parser.add_argument("--no_multiprocess", action="store_true")
         parser.add_argument("--to_step")
 
-        from Orbitool.config import setting, config_path, multi_cores
-        if config_path.exists():
-            setting.update_from(
-                setting.model_validate_json(config_path.read_text()))
-            setting.general.multi_cores = max(
-                1, min(setting.general.multi_cores, multi_cores - 1))
+        from Orbitool.config import setting, multi_cores
+        setting.load_setting()
+        setting.general.multi_cores = max(
+            1, min(setting.general.multi_cores, multi_cores - 1))
 
         setting.save_setting()
         args = parser.parse_args()
@@ -77,7 +75,8 @@ try:
 except Exception as e:
     import traceback
     import datetime
-    with open("log.txt", 'a') as f:
+    from paths import LOG_PATH
+    with open(LOG_PATH, 'a') as f:
         f.writelines([
             datetime.datetime.now().isoformat(),
             traceback.format_exc()])

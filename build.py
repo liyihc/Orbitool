@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import shutil
 import subprocess
 from traceback import print_exc
 import zipfile
@@ -25,7 +24,6 @@ DIST_DIR = Path("dist")
 EXE_DIR = DIST_DIR / "Orbitool"
 ZIP_PATH = DIST_DIR / \
     f"Orbitool-{VERSION.replace('.','_')}.zip"
-START_SCRIPT = CWD / "utils/StartOrbitool.bat"
 
 
 def run_pyuic(config: Config):
@@ -61,18 +59,16 @@ def run_build(config: Config):
             print("cannot find upx path", config.upx_dir)
         return False
     os.system(f"pyinstaller main.spec --upx-dir {config.upx_dir} -y")
-    TARGET = DIST_DIR / START_SCRIPT.name
-    shutil.copyfile(START_SCRIPT, TARGET)
     return True
 
 
 def run_package(config: Config):
+    count = 0
     with zipfile.ZipFile(ZIP_PATH, 'w') as file:
         for path in EXE_DIR.glob("**/*"):
-            print("write to zip files:", path)
             file.write(path, path.relative_to(DIST_DIR), zipfile.ZIP_DEFLATED)
-        file.write(CWD / "utils/StartOrbitool.bat",
-                   "StartOrbitool.bat", zipfile.ZIP_DEFLATED)
+            count += 1
+    print(f"packaged {count} files into {ZIP_PATH}")
 
     subprocess.Popen(
         f'explorer /select,"{ZIP_PATH.absolute()}"')

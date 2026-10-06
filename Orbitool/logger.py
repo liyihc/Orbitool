@@ -2,10 +2,9 @@ from dataclasses import dataclass
 import logging
 import logging.handlers
 from sys import stdout
-from .config import ROOT_PATH
+from paths import LOG_PATH
 
 
-LOG_PATH = ROOT_PATH / 'log.txt'
 logLevel = "DEBUG"
 
 formatter = logging.Formatter(

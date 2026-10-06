@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
-from pathlib import Path
 from multiprocessing import cpu_count
 from typing import List, Literal, Set
 import weakref
 from pydantic import BaseModel, Field
+from paths import CONFIG_PATH, LEGACY_CONFIG_PATH, RESOURCE_PATH, ROOT_PATH
 from .version import VERSION
 
 
@@ -12,11 +12,7 @@ class TempFile:
     tempPath = None
 
 
-ROOT_PATH = Path(__file__).parent.parent
-
-RESOURCE_PATH = ROOT_PATH / "resources"
-
-config_path = ROOT_PATH / "setting.json"
+config_path = CONFIG_PATH
 
 multi_cores = cpu_count() - 1
 if multi_cores < 1:
@@ -77,6 +73,21 @@ class _Setting(BaseModel):
     plot_refresh_interval: float = 1
 
     version: str = VERSION
+
+    def load_setting(self):
+        """Read setting.json into this object, if it exists.
+
+        A pre-PyInstaller-6-layout build wrote setting.json inside `_internal`
+        (the then-ROOT_PATH); if the file is missing at its new home next to the
+        exe, fall back to that legacy copy. ``save_setting`` then persists it in
+        the new location, completing the migration.
+        """
+        source = config_path
+        if (not source.exists() and LEGACY_CONFIG_PATH is not None
+                and LEGACY_CONFIG_PATH.exists()):
+            source = LEGACY_CONFIG_PATH
+        if source.exists():
+            self.update_from(self.model_validate_json(source.read_text()))
 
     def save_setting(self):
         config_path.write_text(self.model_dump_json(indent=4))
