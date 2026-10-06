@@ -88,11 +88,9 @@ To run the real-GUI suite:
   - Pipeline: pyuic → Cython compile (deletes and rebuilds all `*.pyd`) → pytest →
     pyinstaller + UPX → zip.
   - The zip holds `Orbitool/Orbitool.exe` plus its `_internal/` dependency bundle
-    (PyInstaller 6 layout), with no launcher `.bat`. The app writes `setting.json`
-    and `log.txt` next to the exe, outside `_internal`; a `setting.json` left in
-    `_internal` by an older build is migrated on first launch. Both the crash
-    handler and the settings/logger modules resolve those paths from the
-    stdlib-only `paths.py` at the repo root.
+    (PyInstaller 6 layout), with no launcher `.bat`. Settings and logs live next to
+    the exe, outside `_internal`: settings save to `setting.json` via
+    `Orbitool/config.py`, paths resolved in `paths.py`.
   - The pytest step prints the app's `ERROR`/`WARNING` records as they happen (see
     [Everyday](#everyday)) and ends with one verdict line: `pytest: OK (exit 0)`, or
     `pytest FAILED (exit N) - packaging stopped`, which aborts the build before the

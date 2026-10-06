@@ -37,7 +37,15 @@ generation, and packaging. Read it before running any of them.
   change makes stale. A behavior work-flow change touches `docs/guide/`; a
   command/build change touches `docs/dev/`; user-visible changes get a
   `CHANGELOG.md` entry. Also update `readme.md` or `GLOSSARY.md`/`docs/adr/` when
-  they describe what changed — in the same change
+  they describe what changed — in the same change. But `docs/dev/` states
+  contracts and entry points, not implementation mechanics: don't restate what the
+  code already carries (path resolution, migration fallbacks, volatile
+  tables/defaults). To keep it findable, point to the authoritative `file`/`symbol`
+  — a relative link or backticked path, never a line number — and leave the reason
+  and the mechanics in the code's comments/docstring. This holds even for a dev doc
+  that explains a framework (`docs/dev/ui-tasks.md`). The user guide
+  (`docs/guide/`) is exempt: it keeps its own account of the workflow and
+  algorithms, for users who do not read the code
 - Writing tab background operations (`ui_task` / `background`, mode words, error and
   abort contracts): see `docs/dev/ui-tasks.md`
 

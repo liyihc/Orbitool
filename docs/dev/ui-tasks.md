@@ -1,7 +1,8 @@
 # UI background tasks: `ui_task` / `background` cookbook
 
 How to write a tab operation that runs work off the UI thread, without reading
-the framework source (`Orbitool/UI/manager/task.py`). It covers the thread
+the framework source
+([`Orbitool/UI/manager/task.py`](../../Orbitool/UI/manager/task.py)). It covers the thread
 model, the three `mode` words, the error/abort contracts, and the "never touch
 widgets from a worker" rule. Import `ui_task`/`background`/`progress` from
 `.manager` (or `..manager` in a subpackage). A task is an ordinary method — call

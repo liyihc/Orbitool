@@ -29,10 +29,9 @@ Point `build-config.json`'s `mingw_dir` at the extracted directory (the one
 containing `bin\gcc.exe`), see section 4. `gcc` is not expected on `PATH` —
 do not use `where gcc` to check for a toolchain.
 
-The build scripts then, automatically: prepend `<mingw_dir>\bin` to `PATH`;
-compile with `--compiler=mingw32` and define `MS_WIN64` (without it gcc
-computes `SIZEOF_VOID_P = 4` against Python's MSVC-flavoured `pyconfig.h`);
-link `-static` so the `.pyd` files load without MinGW runtime DLLs.
+The build scripts then prepend `<mingw_dir>\bin` to `PATH` and build portable
+`.pyd` files; the compile/link flags and the reasons behind them live in
+`utils/setup.py` (`cythonSetup`).
 
 ### MSVC (alternative)
 
@@ -60,17 +59,8 @@ containing `upx.exe`.
 
 Created by the first `build.py` run (edit it, then rerun) or by
 `util.py setup`'s MinGW prompt. Gitignored — local paths never enter the
-repository. Full reference:
-
-| field | default | meaning |
-|---|---|---|
-| `not_compile_once` | `false` | one-shot: compile once, then this flips itself off |
-| `compile` | `true` | run pyuic + Cython compile stage in `build.py` |
-| `test` | `true` | run pytest stage (build aborts on failure) |
-| `build` | `true` | run pyinstaller + UPX stage |
-| `zip_file` | `true` | zip `dist/` output |
-| `upx_dir` | `""` | directory containing `upx.exe` (empty → packaging stage fails) |
-| `mingw_dir` | `""` | MinGW-w64 root (containing `bin\gcc.exe`); empty → MSVC fallback |
+repository. `utils/build_config.py` (`Config`) defines the fields and their
+defaults.
 
 Minimal example:
 
@@ -88,9 +78,9 @@ uv run --group build python util.py setup          # compile extensions in place
 uv run --group build python util.py setup --clear  # delete *.pyd first
 ```
 
-Scans `Orbitool/` for `.pyx` files and builds them in dependency order.
-Required on a fresh clone: the `*.pyd` files are gitignored, and without them
-imports and tests fail.
+Compiles every `.pyx` under `Orbitool/`; `compileAll` in `utils/setup.py` orders
+them by dependency. Required on a fresh clone: the `*.pyd` files are gitignored,
+and without them imports and tests fail.
 
 ## 6. Package a release
 
@@ -98,9 +88,9 @@ imports and tests fail.
 uv run --group build python build.py
 ```
 
-Pipeline: pyuic → Cython compile (deletes and rebuilds all `*.pyd`) → pytest
-→ pyinstaller + UPX → zip in `dist/`. Any stage failing aborts with a
-non-zero exit code.
+`build.py` runs the stages listed in
+[development.md](development.md#packaging-a-release) and aborts with a non-zero
+exit code on the first failure.
 
 Note: `build.py` refuses to run if `jedi` is importable — build in the
 project venv, not an environment with IDE helper packages.
