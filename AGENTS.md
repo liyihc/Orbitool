@@ -36,7 +36,10 @@ Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/dev/development.md`.
 - Thermo `.RAW` reading requires pythonnet + the tracked ThermoFisher DLLs
   (Windows/.NET only)
 - Qt Designer requires pyside2 installed in a *separate* environment
-- Running the app writes `setting.json` / `log.txt` at the repo root (gitignored)
+- Running the app writes `setting.json` / `log.txt` at the repo root (gitignored);
+  the test suite writes the app log to `.pytest_cache/orbitool-tests.log` (or the
+  system temporary directory) instead, and only ever opens `log.txt` — it never
+  writes to it (see `conftest.py`)
 - Bumping `Orbitool/version.py` may need a matching updater in
   `models/workspace/updater/`, otherwise old `.Orbitool` workspaces won't open
 - `test_thermo.py` hardcodes a personal data path; those tests fail on other machines

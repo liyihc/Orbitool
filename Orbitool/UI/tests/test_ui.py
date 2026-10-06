@@ -1,4 +1,3 @@
-import io
 import logging
 import os
 from PyQt6 import QtWidgets, QtCore
@@ -11,13 +10,11 @@ from .routine import init, fileui, file_spectra, noise, qt_exit
 
 
 # def test_precedure(qtbot: qtbot.QtBot):
-def test_precedure():
-    logger = logging.getLogger("Orbitool")
-    with io.StringIO() as logs:
-        handler = logging.StreamHandler(logs)
-        handler.setLevel(logging.ERROR)
-        logger.addHandler(handler)
-
+def test_precedure(caplog):
+    # caplog instead of a hand-attached handler: the routine must not log an
+    # error, and a handler added here would have to be removed again by hand
+    # (conftest.py restores the logger afterwards anyway).
+    with caplog.at_level(logging.ERROR, logger="Orbitool"):
         app = QtWidgets.QApplication([])
         window = Window()
         init(window)
@@ -32,8 +29,10 @@ def test_precedure():
         print("ui test finished")
 
         window.close()        
-        
-        assert not logs.getvalue()
+
+    assert not any(
+        r.name.startswith("Orbitool") and r.levelno >= logging.ERROR
+        for r in caplog.records)
 
 
 def test_export_load():

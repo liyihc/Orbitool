@@ -27,7 +27,18 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
   them imports and tests fail (including `models/spectrum/_denoise.py` and
   `_functions.py`, which are PE binaries disguised as `.py`). Only scans
   `Orbitool/` (never `.venv/`).
-- `uv run --group dev pytest` — run the test suite (paths are listed in `pytest.ini`)
+- `uv run --group dev pytest` — run the test suite (paths are listed in `pytest.ini`).
+  `pytest.ini` turns on pytest's live logging (`log_cli`, level `INFO`), so the
+  application's own `INFO`-and-above records show up on the console as the tests
+  run, with pytest's format; `DEBUG` is not shown live. Every test that
+  deliberately logs an error (the `ui_task` error contract) is therefore expected
+  output, not a failure — the verdict is the pytest summary line.
+  The repository-root `conftest.py` keeps the process-wide `Orbitool` logger out of
+  the way: during tests the app's file log is `.pytest_cache/orbitool-tests.log`,
+  falling back to the system temporary directory and, failing that, to dropping the
+  records — never to the `log.txt` a user sends to support. The logger's
+  handlers/level/`propagate` are also snapshotted around every test: a test that
+  leaves them changed gets a `PytestWarning` and the old configuration back.
 - `uv run python Main.py [--debug] [--no_multiprocess] [--to_step file|noise|peak-fit|calibration]` —
   launch the app; exceptions are appended to `log.txt` in the repo root
 - Ad-hoc scripts that `import Orbitool` must run with the repo root on
@@ -69,6 +80,10 @@ To run the real-GUI suite:
     see [build-environment.md](build-environment.md)), then run again.
   - Pipeline: pyuic → Cython compile (deletes and rebuilds all `*.pyd`) → pytest →
     pyinstaller + UPX → zip.
+  - The pytest step prints the app's `ERROR`/`WARNING` records as they happen (see
+    [Everyday](#everyday)) and ends with one verdict line: `pytest: OK (exit 0)`, or
+    `pytest FAILED (exit N) - packaging stopped`, which aborts the build before the
+    PyInstaller step.
   - Fails on purpose if `jedi` is importable — use a build environment without IDE
     helper packages.
 - Other `util.py` subcommands: `count | setup | copy | collect | clear`.

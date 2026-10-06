@@ -47,8 +47,9 @@ def run_compile(config: Config):
 def run_test(config: Config):
     ret = pytest.main(["-c", "pytest.ini"])
     if ret != 0:
-        print("Test failed with code", ret)
+        print(f"pytest FAILED (exit {int(ret)}) - packaging stopped")
         return False
+    print("pytest: OK (exit 0)")
     return True
 
 
