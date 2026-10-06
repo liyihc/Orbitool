@@ -4,7 +4,7 @@ import threading
 import time
 
 import pytest
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool import setting
 from ..manager import Manager
@@ -37,23 +37,6 @@ def show_info(monkeypatch):
     return calls
 
 
-@pytest.fixture
-def held_threads(monkeypatch):
-    # Driver only keeps the newest thread on manager.running_thread; while
-    # two real-thread tasks overlap, earlier workers would otherwise be
-    # garbage-collected mid-run, so keep every Thread created in this test
-    held = []
-    original = task_module.Thread
-
-    class HeldThread(original):
-        def __init__(self, func, args=(), kwargs={}):
-            super().__init__(func, args, kwargs)
-            held.append(self)
-
-    monkeypatch.setattr(task_module, "Thread", HeldThread)
-    return held
-
-
 def _wait_until(cond, timeout=5.0):
     deadline = time.monotonic() + timeout
     while not cond() and time.monotonic() < deadline:
@@ -64,6 +47,46 @@ def _wait_until(cond, timeout=5.0):
 
 def worker_boom():
     raise ValueError("boom from worker")
+
+
+def test_overlapping_workers_are_not_destroyed(monkeypatch):
+    # Regression for "QThread: Destroyed while thread '' is still running":
+    # a step that starts the next worker overwrites manager.running_thread,
+    # and the earlier worker used to lose its last Python reference while
+    # still running. Assert the observable symptom (Qt prints that warning)
+    # rather than the private held-reference bookkeeping.
+    monkeypatch.setattr(setting.debug, "thread_block_gui", False)
+    widget = _Widget()
+    release = threading.Event()
+    first_running = threading.Event()
+    second_done = threading.Event()
+
+    @ui_task(mode="join")
+    async def first(widget):
+        def work():
+            first_running.set()
+            release.wait(5)
+        await background(work, "first")
+
+    @ui_task(mode="join")
+    async def second(widget):
+        await background(lambda: "second", "second")
+        second_done.set()
+
+    messages = []
+    previous = QtCore.qInstallMessageHandler(
+        lambda mode, context, message: messages.append(message))
+    try:
+        first.func(widget)
+        assert first_running.wait(5)
+        second.func(widget)  # overwrites running_thread while first runs
+        _wait_until(second_done.is_set)
+        release.set()
+        _wait_until(lambda: not widget.manager.busy)
+    finally:
+        QtCore.qInstallMessageHandler(previous)
+
+    assert not any("Destroyed while thread" in m for m in messages), messages
 
 
 @pytest.mark.parametrize("letter", ["w", "x", "a", "e", "n"])
@@ -110,8 +133,7 @@ def test_light_error_shows_dialog_but_leaves_busy_alone(show_info, caplog):
     assert events == []
 
 
-def test_default_refused_when_count_holds_busy(
-        show_info, held_threads, monkeypatch):
+def test_default_refused_when_count_holds_busy(show_info, monkeypatch):
     monkeypatch.setattr(setting.debug, "thread_block_gui", False)
     widget = _Widget()
     release = threading.Event()
@@ -270,7 +292,7 @@ def test_nested_inner_finishes_first_busy_held_until_outer_finishes(
 
 
 def test_nested_outer_finishes_first_busy_held_until_inner_finishes(
-        show_info, held_threads, monkeypatch):
+        show_info, monkeypatch):
     monkeypatch.setattr(setting.debug, "thread_block_gui", False)
     widget = _Widget()
     events = []

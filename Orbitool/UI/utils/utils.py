@@ -2,7 +2,7 @@ from csv import QUOTE_ALL
 from typing import Any, Union
 from typing_extensions import deprecated
 import numpy as np
-from PyQt6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 
 from Orbitool.UI.setting.FileTabUiPy import Tab
 

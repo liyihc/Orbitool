@@ -40,6 +40,9 @@ worker thread |                              |---- run work ----|         │
   step) and goes through the standard error fallback: `asyncio.sleep`, or a
   `@ui_task` method (a task is not awaitable — call it, or relay through
   `join`). This is not asyncio and there is no event loop of your own.
+- The framework keeps every started worker alive until Qt reports it
+  finished. A step that starts the next worker from its result therefore
+  never tears down a thread that is still running.
 
 In the test suite and in `--debug`'s synchronous mode
 (`setting.debug.thread_block_gui`) workers run inline for determinism; the
@@ -153,8 +156,8 @@ progress there stays with the framework's automatic `read`/`write` reporting.
 A relay handler fires while the task that triggered it still holds busy:
 
 ```python
-class PipelineTab(QtCore.QObject):  # pyqtSignal must live on a QObject subclass
-    stepFinished = QtCore.pyqtSignal()
+class PipelineTab(QtCore.QObject):  # Signal must live on a QObject subclass
+    stepFinished = QtCore.Signal()
 
     @ui_task
     async def run(self):                     # default: holds busy for the whole run
@@ -191,7 +194,7 @@ The decorated coroutine's own signature decides what the slot receives:
 
 ```python
 class Emitter(QtCore.QObject):
-    fired = QtCore.pyqtSignal(int, str)
+    fired = QtCore.Signal(int, str)
 
 class Tab:
     def __init__(self):

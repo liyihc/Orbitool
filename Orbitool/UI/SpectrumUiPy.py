@@ -1,7 +1,7 @@
 import csv
 from typing import Optional, Union
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from ..models.spectrum.spectrum import Spectrum
 from . import SpectrumUi

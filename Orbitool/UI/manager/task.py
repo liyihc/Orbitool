@@ -5,7 +5,7 @@ import logging
 import weakref
 from typing import Any, Callable, Optional
 
-from PyQt6 import QtCore
+from PySide6 import QtCore
 
 from ... import setting
 from ..utils import showInfo, sleep
@@ -125,7 +125,7 @@ class Driver:
         if setting.debug.thread_block_gui:
             thread.run()
         else:
-            thread.start()
+            manager.start_thread(thread)
 
     def _complete(self) -> None:
         if self._finished:

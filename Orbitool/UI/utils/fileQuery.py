@@ -1,5 +1,5 @@
 import os
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 from functools import wraps
 from typing import Tuple, List
 
@@ -18,7 +18,7 @@ def savefile(caption, filter, prefer_name=None) -> Tuple[bool, str]:
     else:
         path = savefile_dir
     f, typ = QtWidgets.QFileDialog.getSaveFileName(
-        caption=caption, directory=path, filter=filter)
+        caption=caption, dir=path, filter=filter)
 
     if len(f) == 0:
         return False, f
@@ -30,7 +30,7 @@ def savefile(caption, filter, prefer_name=None) -> Tuple[bool, str]:
 def openfile(caption, filter) -> Tuple[bool, str]:
     global openfile_dir
     f, typ = QtWidgets.QFileDialog.getOpenFileName(
-        caption=caption, directory=openfile_dir, filter=filter)
+        caption=caption, dir=openfile_dir, filter=filter)
 
     if len(f) == 0:
         return False, f
@@ -44,7 +44,7 @@ def openfile(caption, filter) -> Tuple[bool, str]:
 def openfiles(caption, filter) -> List[str]:
     global openfile_dir
     f, typ = QtWidgets.QFileDialog.getOpenFileNames(
-        caption=caption, directory=openfile_dir, filter=filter)
+        caption=caption, dir=openfile_dir, filter=filter)
 
     if len(f) > 0:
         openfile_dir = os.path.dirname(f[0])
@@ -55,7 +55,7 @@ def openfiles(caption, filter) -> List[str]:
 def openfolder(caption) -> Tuple[bool, str]:
     global openfolder_dir
     folder = QtWidgets.QFileDialog.getExistingDirectory(
-        caption=caption, directory=openfolder_dir)
+        caption=caption, dir=openfolder_dir)
 
     if len(folder) == 0:
         return False, folder

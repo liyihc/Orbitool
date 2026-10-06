@@ -82,7 +82,7 @@ class _Setting(BaseModel):
         config_path.write_text(self.model_dump_json(indent=4))
 
     def apply_color_scheme(self, app):
-        from PyQt6 import QtCore
+        from PySide6 import QtCore
         schemes = {
             "system": QtCore.Qt.ColorScheme.Unknown,
             "light": QtCore.Qt.ColorScheme.Light,

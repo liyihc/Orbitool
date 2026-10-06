@@ -3,7 +3,7 @@ from typing import List, Optional, Union
 
 import matplotlib.ticker
 import numpy as np
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from Orbitool.models import peakfit
 from Orbitool.models.formula import Formula, correct_formula
@@ -18,7 +18,7 @@ from .utils import set_header_sizes
 
 
 class Window(QtWidgets.QMainWindow):
-    callback = QtCore.pyqtSignal()
+    callback = QtCore.Signal()
 
     @classmethod
     def get_or_create(cls, manager: Manager, peak_index: int):

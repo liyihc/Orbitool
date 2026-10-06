@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, Optional, Union
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool.models.file import FileSpectrumInfo
 

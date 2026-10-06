@@ -8,7 +8,7 @@ from typing import Generator, Iterable, List, Optional, Tuple, Union
 import matplotlib.ticker
 import numpy as np
 from numpy.polynomial.polynomial import polyval
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool import logger, setting
 from Orbitool.base.disk_structure import DiskListDirectView
@@ -60,8 +60,8 @@ def reportDamagedFiles(damaged: thermo.DamagedScansByFile):
 
 
 class Widget(QtWidgets.QWidget):
-    selected_spectrum_average = QtCore.pyqtSignal(Spectrum)
-    callback = QtCore.pyqtSignal(tuple)
+    selected_spectrum_average = QtCore.Signal(Spectrum)
+    callback = QtCore.Signal(tuple)
 
     def __init__(self, manager: Manager) -> None:
         super().__init__()

@@ -1,7 +1,7 @@
 from datetime import datetime
 from statistics import mode
-from PyQt6 import QtWidgets
-from PyQt6.QtCore import QTimer
+from PySide6 import QtWidgets
+from PySide6.QtCore import QTimer
 
 from matplotlib.backend_bases import FigureCanvasBase
 from matplotlib.backends.backend_qtagg import FigureCanvas, NavigationToolbar2QT

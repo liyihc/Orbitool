@@ -5,7 +5,7 @@ from .manager import Manager, ui_task
 import matplotlib.ticker
 
 
-from PyQt6 import QtWidgets, QtGui
+from PySide6 import QtWidgets, QtGui
 from Orbitool.models.spectrum import Spectrum, safeCutSpectrum, safeSplitSpectrum
 from . import CalibrationDetailUi
 from .component import Plot

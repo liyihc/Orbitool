@@ -1,6 +1,6 @@
 from multiprocessing import cpu_count
 import typing
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from .GeneralTabUi import Ui_Form
 from Orbitool.config import _Setting
 from .common import BaseTab

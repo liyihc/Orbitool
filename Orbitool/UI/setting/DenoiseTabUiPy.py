@@ -1,4 +1,4 @@
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from .DenoiseTabUi import Ui_Form
 from Orbitool.config import _Setting
 from Orbitool.models.formula import Formula

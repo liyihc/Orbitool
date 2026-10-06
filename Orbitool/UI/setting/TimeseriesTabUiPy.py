@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Dict, get_args
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from .TimeseriesTabUi import Ui_Form
 from Orbitool.config import _Setting
 from Orbitool.utils.time_format import converters

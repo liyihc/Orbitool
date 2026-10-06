@@ -1,7 +1,7 @@
 from array import array
 from datetime import datetime, timedelta
 
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from ...models.timeseries import TimeSeries
 from ..MainUiPy import Window

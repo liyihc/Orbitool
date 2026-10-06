@@ -1,7 +1,7 @@
 import csv
 from typing import Optional
 
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from ..utils.time_format.time_convert import converters
 from . import TimeseriesUi

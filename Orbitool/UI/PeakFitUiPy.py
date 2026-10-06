@@ -6,7 +6,7 @@ from typing import Callable, List, Optional, Set, Tuple, cast
 import matplotlib.text
 import matplotlib.ticker
 import numpy as np
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool import setting
 from Orbitool.models import peakfit as peakfit_func
@@ -27,9 +27,9 @@ class FitMethod(str, Enum):
 
 
 class Widget(QtWidgets.QWidget):
-    show_spectrum = QtCore.pyqtSignal(Spectrum)
-    show_masslist = QtCore.pyqtSignal()
-    filter_selected = QtCore.pyqtSignal(bool)  # selected or unselected
+    show_spectrum = QtCore.Signal(Spectrum)
+    show_masslist = QtCore.Signal()
+    filter_selected = QtCore.Signal(bool)  # selected or unselected
 
     def __init__(self, manager: Manager) -> None:
         super().__init__()

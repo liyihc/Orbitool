@@ -7,7 +7,7 @@ from typing import Dict, Iterable, List, Literal, Optional, Tuple
 import matplotlib.lines
 import matplotlib.ticker
 import numpy as np
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool.base.disk_structure import DiskListDirectView
 from Orbitool.models.formula import Formula
@@ -27,7 +27,7 @@ from .utils import TableUtils, savefile, showInfo
 
 
 class Widget(QtWidgets.QWidget):
-    click_series = QtCore.pyqtSignal()
+    click_series = QtCore.Signal()
 
     def __init__(self, manager: Manager) -> None:
         super().__init__()

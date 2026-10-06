@@ -1,7 +1,7 @@
 from functools import partial
 from typing import DefaultDict, Dict, Iterable, List, Optional, Union, cast
 
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from Orbitool import utils
 from Orbitool.models.file import FileSpectrumInfo, Path, PathList
@@ -16,7 +16,7 @@ from .utils import str2timedelta
 
 
 class Widget(QtWidgets.QWidget):
-    callback = QtCore.pyqtSignal()
+    callback = QtCore.Signal()
 
     def __init__(self, manager: Manager, parent: Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent=parent)
@@ -83,8 +83,8 @@ class Widget(QtWidgets.QWidget):
     async def edit_period(self):
         from .CustomPeriodUiPy import Dialog
         ui = self.ui
-        start_time = ui.startDateTimeEdit.dateTime().toPyDateTime()
-        end_time = ui.endDateTimeEdit.dateTime().toPyDateTime()
+        start_time = ui.startDateTimeEdit.dateTime().toPython()
+        end_time = ui.endDateTimeEdit.dateTime().toPython()
         time_interval = ui.nMinutesLineEdit.text()
         dialog = Dialog(
             self.manager, start_time, end_time,
@@ -249,8 +249,8 @@ class Widget(QtWidgets.QWidget):
 
     def _process_paths(self, paths: List[Path]):
         ui = self.ui
-        time_range = (ui.startDateTimeEdit.dateTime().toPyDateTime(),
-                      ui.endDateTimeEdit.dateTime().toPyDateTime())
+        time_range = (ui.startDateTimeEdit.dateTime().toPython(),
+                      ui.endDateTimeEdit.dateTime().toPython())
 
         self.info.rtol = ui.rtolDoubleSpinBox.value() * 1e-6
 

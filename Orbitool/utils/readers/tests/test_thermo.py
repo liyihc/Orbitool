@@ -1,6 +1,6 @@
 from pathlib import Path
 from .. import ThermoFile
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 # class TestThermo:
 #     def setup_class(self):
@@ -10,6 +10,8 @@ from PyQt6 import QtWidgets
 #     def test_average(self):
 #         self.f.getAveragedSpectrum(1e-6,None,(1,10))
 
+# Hardcoded to one developer's data folder: this module fails on any other machine
+# unless the path is changed to a local folder holding the referenced .RAW files.
 DATA_PATH = Path("C:/Users/liyih/OneDrive/Documents/Work/质谱分析/data")
 
 

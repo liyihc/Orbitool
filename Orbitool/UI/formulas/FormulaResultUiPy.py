@@ -2,7 +2,7 @@ from copy import deepcopy
 import re
 from typing import List
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from pyteomics.mass.mass import isotopologues
 
 from Orbitool.models.formula import Formula
@@ -16,7 +16,7 @@ from . import FormulaResultUi
 
 
 class Window(QtWidgets.QMainWindow):
-    acceptSignal = QtCore.pyqtSignal(list)
+    acceptSignal = QtCore.Signal(list)
 
     def __init__(self, manager: Manager, input: str, mass: float, formulas: List[Formula], peak_index: int) -> None:
         super().__init__()

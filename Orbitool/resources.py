@@ -7,9 +7,9 @@ class _IconGetter:
         self.name = name
 
     def __get__(self, ins, own):
-        from PyQt6.QtGui import QIcon, QPixmap, QImage
-        from PyQt6.QtWidgets import QApplication
-        from PyQt6 import QtCore
+        from PySide6.QtGui import QIcon, QPixmap, QImage
+        from PySide6.QtWidgets import QApplication
+        from PySide6 import QtCore
         img = QImage(str(ICON_PATH / self.name))
         app: QApplication = setting.get_global_var("app")
         if app.styleHints().colorScheme() == QtCore.Qt.ColorScheme.Dark:

@@ -4,7 +4,7 @@ import shutil
 from typing import Dict, Union
 
 from matplotlib.pyplot import get
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from Orbitool import setting
 from Orbitool.base.structure import broken_entries as h5_brokens

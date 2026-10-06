@@ -40,7 +40,7 @@ try:
         mpl.use("QtAgg")
         mpl.rcParams['agg.path.chunksize'] = 10000
 
-        from PyQt6 import QtCore, QtWidgets, QtGui
+        from PySide6 import QtCore, QtWidgets, QtGui
 
         import sys
         app = QtWidgets.QApplication(sys.argv)

@@ -1,6 +1,6 @@
 import typing
-from PyQt6 import QtCore, QtWidgets
-from PyQt6.QtWidgets import QWidget
+from PySide6 import QtCore, QtWidgets
+from PySide6.QtWidgets import QWidget
 from Orbitool.config import _Setting
 
 class BaseTab(QtWidgets.QWidget):

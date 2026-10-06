@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from Orbitool import setting
 from Orbitool.base.disk_structure import DiskListDirectView
@@ -33,7 +33,7 @@ class ShownState(int, Enum):
 
 
 class Widget(QtWidgets.QWidget):
-    callback = QtCore.pyqtSignal()
+    callback = QtCore.Signal()
 
     def __init__(self, manager: Manager) -> None:
         super().__init__()

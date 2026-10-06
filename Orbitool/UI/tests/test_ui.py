@@ -1,6 +1,6 @@
 import logging
 import os
-from PyQt6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 import tempfile
 # from pytestqt import qtbot
 from ..MainUiPy import Window

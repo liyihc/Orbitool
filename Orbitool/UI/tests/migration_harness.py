@@ -9,7 +9,7 @@ migration tests only declare what is specific to their tab batch.
 import importlib
 
 import pytest
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from Orbitool import setting
 from ..MainUiPy import Window

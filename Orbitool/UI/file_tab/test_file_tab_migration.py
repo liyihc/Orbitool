@@ -12,7 +12,7 @@ goes through a stubbed DragHelper.
 from datetime import datetime
 
 import pytest
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from ..utils import test as uitest
 from . import CustomPeriodUiPy, FileDetailUiPy

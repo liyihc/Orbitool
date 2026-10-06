@@ -1,7 +1,7 @@
 from collections import Counter
 from datetime import timedelta
 from math import isnan
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 from Orbitool.config import setting
 from Orbitool.UI.utils import TableUtils
 

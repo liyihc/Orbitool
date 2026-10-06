@@ -39,6 +39,10 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
   records — never to the `log.txt` a user sends to support. The logger's
   handlers/level/`propagate` are also snapshotted around every test: a test that
   leaves them changed gets a `PytestWarning` and the old configuration back.
+  For a concise run with no live `INFO` chatter — `-q` trims pytest's own progress
+  and `-o log_cli=false` turns off the live logging; failing tests still print their
+  captured logs and tracebacks — use
+  `uv run --group dev pytest -q -o log_cli=false`.
 - `uv run python Main.py [--debug] [--no_multiprocess] [--to_step file|noise|peak-fit|calibration]` —
   launch the app; exceptions are appended to `log.txt` in the repo root
 - Ad-hoc scripts that `import Orbitool` must run with the repo root on
@@ -70,7 +74,10 @@ To run the real-GUI suite:
 ## UI code generation
 
 - Edit `*.ui` sources (Qt Designer), then `uv run python util.py pyuic` to regenerate
-  the `*Ui.py` / `*Ui.Py` files. Never edit the generated files by hand.
+  the `*Ui.py` / `*Ui.Py` files. Never edit the generated files by hand; application
+  logic lives in the hand-written `*UiPy.py` siblings.
+- A few generated files end in uppercase `.Py`; those imports only resolve on
+  case-insensitive filesystems (Windows).
 
 ## Packaging a release
 

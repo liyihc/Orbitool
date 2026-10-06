@@ -7,7 +7,7 @@ from queue import Queue
 from typing import (Any, Deque, Generator, Generic, Iterable, List, Tuple,
                     TypeVar, final)
 
-from PyQt6 import QtCore
+from PySide6 import QtCore
 
 from ... import setting
 from Orbitool.config import _Setting
@@ -25,7 +25,7 @@ EXCEPTION = "exception"
 
 
 class Thread(QtCore.QThread):
-    result_ready = QtCore.pyqtSignal(tuple)
+    result_ready = QtCore.Signal(tuple)
 
     def __init__(self, func, args=(), kwargs={}) -> None:
         super().__init__()
@@ -59,7 +59,7 @@ def init_process(main_setting: _Setting):
     setting.update_from(main_setting)
 
 class MultiProcess(QtCore.QThread, Generic[Data, Result]):
-    result_ready = QtCore.pyqtSignal(tuple)
+    result_ready = QtCore.Signal(tuple)
 
     @final
     def __init__(self, file, read_kwargs: dict = None, func_kwargs: dict = None, write_kwargs: dict = None) -> None:

@@ -5,7 +5,7 @@ from typing import Optional, Union
 import numpy as np
 from matplotlib.cm import rainbow as rainbow_color_map
 from matplotlib.figure import Figure
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool.models.spectrum import FittedPeak
 from Orbitool.models.workspace.massdefect import Clr, Gry

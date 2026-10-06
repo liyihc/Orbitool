@@ -8,7 +8,7 @@ interpretable results:
 > spectrum averaging → denoising → peak shape → calibration → peak fitting →
 > formula / mass defect / time series
 
-It is built with PyQt6 and stores its data in HDF5 workspaces (`.Orbitool`
+It is built with PySide6 and stores its data in HDF5 workspaces (`.Orbitool`
 files). It is aimed at atmospheric and environmental chemistry researchers.
 
 ## Get started

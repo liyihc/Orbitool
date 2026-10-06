@@ -11,8 +11,8 @@ from typing import (
 from types import MethodType
 
 import numpy as np
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QTableWidget
+from PySide6.QtCore import QObject, QThread, QTimer, Signal
+from PySide6.QtWidgets import QMainWindow, QTableWidget
 
 from Orbitool.models.workspace import WorkSpace
 
@@ -43,12 +43,13 @@ class Manager(QObject):
     """
     storage common resources
     """
-    busy_signal = pyqtSignal(bool)
-    msg = pyqtSignal(str)
+    busy_signal = Signal(bool)
+    msg = Signal(str)
 
     def __init__(self) -> None:
         super().__init__()
         self.running_thread: QThread = None
+        self._live_threads: Set[QThread] = set()
         self.workspace: WorkSpace = None
         self._busy_count: int = 0
 
@@ -101,6 +102,38 @@ class Manager(QObject):
     @property
     def busy(self):
         return self._busy_count > 0
+
+    def start_thread(self, thread: QThread) -> None:
+        """
+        Start a worker thread, holding a strong reference to it until Qt
+        reports it finished.
+
+        `running_thread` only remembers the newest worker, so the next
+        background step overwrites the previous one while it may still be
+        winding down. PySide6 then deletes the QThread wrapper as soon as
+        the Python reference count drops, destroying the C++ thread while
+        it is still running ("QThread: Destroyed while thread '' is still
+        running"). Here the reference is released on `finished`, which
+        reaches the main thread.
+
+        The release slot holds the thread through a weakref, not a closure:
+        a direct capture would leave a thread <-> connection reference cycle
+        and the wrapper would never be freed by reference counting.
+        """
+        self._live_threads.add(thread)
+        ref = weakref.ref(thread)
+
+        def release():
+            t = ref()
+            if t is not None:
+                self._live_threads.discard(t)
+
+        thread.finished.connect(release)
+        try:
+            thread.start()
+        except BaseException:
+            self._live_threads.discard(thread)
+            raise
 
 
 T = TypeVar("T")
@@ -158,7 +191,7 @@ class TQDM(Generic[T]):
 
 
 class TQDMER(QObject):
-    tqdm_signal = pyqtSignal(int, int, str)  # label, percent, msg
+    tqdm_signal = Signal(int, int, str)  # label, percent, msg
 
     def __init__(self) -> None:
         super().__init__()

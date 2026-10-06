@@ -2,7 +2,7 @@ import csv
 from typing import Optional, Union
 from functools import partial
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool.models.peakfit import MassListItem, MassListHelper
 from Orbitool.models.formula import Formula

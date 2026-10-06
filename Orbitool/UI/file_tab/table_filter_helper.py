@@ -1,6 +1,6 @@
 from typing import Union
 
-from PyQt6 import QtCore, QtWidgets, QtGui
+from PySide6 import QtCore, QtWidgets, QtGui
 from Orbitool import logger
 
 from Orbitool.utils.readers import spectrum_filter

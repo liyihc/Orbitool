@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Reading Thermo .RAW depends on pythonnet plus the ThermoFisher DLLs tracked next to
+# this file, so it only works on Windows with a .NET runtime installed.
 
 from datetime import datetime, timedelta
 from functools import cached_property

@@ -4,8 +4,8 @@ import csv
 from datetime import datetime, timedelta
 from typing import List, Literal, Union
 import weakref
-from PyQt6 import QtCore, QtWidgets, QtGui
-from PyQt6.QtWidgets import QStyleOptionViewItem, QWidget
+from PySide6 import QtCore, QtWidgets, QtGui
+from PySide6.QtWidgets import QStyleOptionViewItem, QWidget
 import numpy as np
 
 from Orbitool import setting
@@ -195,8 +195,8 @@ class Dialog(QtWidgets.QDialog):
         if not self.paths:
             return
         tr = (
-            ui.startDateTimeEdit.dateTime().toPyDateTime(),
-            ui.endDateTimeEdit.dateTime().toPyDateTime()
+            ui.startDateTimeEdit.dateTime().toPython(),
+            ui.endDateTimeEdit.dateTime().toPython()
         )
         N = ui.numIntervalSpinBox.value()
 
@@ -219,8 +219,8 @@ class Dialog(QtWidgets.QDialog):
         ui = self.ui
         self.periods = [
             PeriodItem(start_time=s, end_time=e) for s, e in generate_periods(
-                ui.startDateTimeEdit.dateTime().toPyDateTime(),
-                ui.endDateTimeEdit.dateTime().toPyDateTime(),
+                ui.startDateTimeEdit.dateTime().toPython(),
+                ui.endDateTimeEdit.dateTime().toPython(),
                 str2timedelta(ui.timeIntervalLineEdit.text())
             )]
         self.show_periods()
@@ -402,7 +402,7 @@ class TableEditDelegate(QtWidgets.QItemDelegate):
                     period.stop_num = value
             model.setData(index, str(value))
         else:
-            value = editor.dateTime().toPyDateTime()
+            value = editor.dateTime().toPython()
             match index.column():
                 case 0:
                     period.start_time = value

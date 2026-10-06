@@ -2,7 +2,7 @@ from typing import List, Tuple
 from multiprocessing import freeze_support
 from time import sleep
 
-from PyQt6 import QtWidgets, QtCore
+from PySide6 import QtWidgets, QtCore
 from .. import MultiProcess, Manager, Thread
 from ..thread import EXCEPTION, RESULT
 from Orbitool import setting

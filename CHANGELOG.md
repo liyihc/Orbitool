@@ -5,6 +5,22 @@ on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The Qt binding moved from `PyQt6` to `PySide6-Essentials` (LGPLv3, and slimmer:
+  the Addons — QtWebEngine, Charts, 3D, Multimedia, … — are not pulled in). All
+  `PyQt6` imports are now `PySide6`, `pyqtSignal`/`pyqtSlot` are `Signal`/`Slot`,
+  and the generated `*Ui.py` / `*Ui.Py` files were regenerated with `pyside6-uic`.
+  Qt Designer now ships with PySide6 (`pyside6-designer`), so the separate pyside2
+  environment is no longer needed. Three switch-over follow-ups ride along:
+  `util.py pyuic` preserves the existing case of generated `*Ui.py` / `*Ui.Py`
+  filenames, so `--clear` no longer fails on case-sensitive directories; the
+  file/folder pickers use PySide6's `dir=` keyword (PyQt6's `directory=` is
+  rejected), so **Open**, **Save** and **Select folder** work again; and background
+  workers are kept referenced until Qt reports them finished, so a step that starts
+  the next worker from its result no longer destroys a still-running `QThread`
+  (`QThread: Destroyed while thread '' is still running`, seen after **Denoise**).
+
 ### Added
 
 - A theme option in **Settings → General** with three choices: **Follow system**,

@@ -3,7 +3,7 @@ import contextlib
 import csv
 from typing import Dict, List, Optional, Tuple, Union, cast
 
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from Orbitool.models.formula import Formula
 from Orbitool.models.spectrum import FittedPeak, PeakTags

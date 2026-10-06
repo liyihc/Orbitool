@@ -9,7 +9,7 @@ import matplotlib.backend_bases
 import matplotlib.lines
 import matplotlib.ticker
 import numpy as np
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool.models import peakfit as peakfit_func
 from Orbitool.models import spectrum as spectrum_func
@@ -48,7 +48,7 @@ def _export_peak_shape(path, peaks, func):
 
 class LineAnimation:
     __slots__ = ["start_point", "end_point", "norm_line", "line", "animation"]
-    callback = QtCore.pyqtSignal(tuple)
+    callback = QtCore.Signal(tuple)
 
     def __init__(self) -> None:
         self.start_point: Tuple[float, float] = None
@@ -59,7 +59,7 @@ class LineAnimation:
 
 
 class Widget(QtWidgets.QWidget):
-    callback = QtCore.pyqtSignal(tuple)
+    callback = QtCore.Signal(tuple)
 
     def __init__(self, manager: Manager, parent: Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent=parent)

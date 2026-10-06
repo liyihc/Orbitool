@@ -7,7 +7,7 @@ import traceback
 import weakref
 
 import pytest
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from Orbitool import setting
 from ..manager import Manager
@@ -535,7 +535,7 @@ def test_keyword_only_parameter_accepts_keyword_position_fails(show_info):
 
 def test_signal_connect_truncates_and_disconnects_by_identity(show_info):
     class Emitter(QtCore.QObject):
-        fired = QtCore.pyqtSignal(int, str)
+        fired = QtCore.Signal(int, str)
 
     class W(_Widget):
         def __init__(self):
@@ -649,7 +649,7 @@ def test_cookbook_multiprocess_instance(show_info):
 
 def test_cookbook_join_relay(show_info):
     class Emitter(QtCore.QObject):
-        stepFinished = QtCore.pyqtSignal()
+        stepFinished = QtCore.Signal()
 
     class Tab(_Widget):
         def __init__(self):
@@ -686,7 +686,7 @@ def test_cookbook_join_relay(show_info):
 
 def test_cookbook_light_slot(show_info):
     class Emitter(QtCore.QObject):
-        selectionChanged = QtCore.pyqtSignal(int)
+        selectionChanged = QtCore.Signal(int)
 
     class Tab(_Widget):
         def __init__(self):
@@ -713,7 +713,7 @@ def test_cookbook_light_slot(show_info):
 
 def test_cookbook_slot_arguments(show_info):
     class Emitter(QtCore.QObject):
-        fired = QtCore.pyqtSignal(int, str)
+        fired = QtCore.Signal(int, str)
 
     class Tab(_Widget):
         def __init__(self):

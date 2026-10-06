@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from ..models.file import FileSpectrumInfo
 from ..models.peakfit.normal_distribution import NormalDistributionFunc
