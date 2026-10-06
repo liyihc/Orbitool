@@ -23,6 +23,7 @@ Managed by uv (Python 3.14, locked in `uv.lock`). See `docs/dev/development.md`.
 
 ## Notes
 
+- Reply in the same language the user writes in
 - Fresh clone has no compiled Cython extensions: run
   `uv run --group build python util.py setup` first (requires a C++ toolchain —
   MinGW-w64 or MSVC, see `docs/dev/build-environment.md`), or imports and tests fail
