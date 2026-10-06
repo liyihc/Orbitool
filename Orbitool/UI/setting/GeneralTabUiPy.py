@@ -7,6 +7,10 @@ from .common import BaseTab
 from datetime import datetime
 
 
+COLOR_SCHEMES = ("system", "light", "dark")
+COLOR_SCHEME_LABELS = ("Follow system", "Light", "Dark")
+
+
 class Tab(BaseTab):
     def __init__(self, parent: QtWidgets.QWidget, setting: _Setting) -> None:
         super().__init__(parent)
@@ -21,6 +25,10 @@ class Tab(BaseTab):
 
         def revert(line_edit: QtWidgets.QLineEdit, field: str):
             line_edit.setText(type(general).model_fields[field].get_default())
+
+        ui.themeComboBox.addItems(COLOR_SCHEME_LABELS)
+        ui.themeComboBox.setCurrentIndex(
+            COLOR_SCHEMES.index(general.color_scheme))
 
         ui.defaultSelectCheckBox.setChecked(general.default_select)
 
@@ -42,6 +50,7 @@ class Tab(BaseTab):
     def stash_setting(self, setting: _Setting):
         ui = self.ui
         general = setting.general
+        general.color_scheme = COLOR_SCHEMES[ui.themeComboBox.currentIndex()]
         general.multi_cores = ui.multiCoresSpinBox.value()
         general.default_select = ui.defaultSelectCheckBox.isChecked()
         general.time_format = ui.timeFormatLineEdit.text()

@@ -82,3 +82,6 @@ class Dialog(QtWidgets.QDialog):
         self.stash_tab()
         setting.update_from(self.tmp_setting)
         setting.save_setting()
+        app = setting.get_global_var("app")
+        if app is not None:
+            setting.apply_color_scheme(app)

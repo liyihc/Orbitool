@@ -5,6 +5,12 @@ on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- A theme option in **Settings → General** with three choices: **Follow system**,
+  **Light** and **Dark**. It selects the Qt color scheme; **Light** stays the
+  default. The choice takes effect when the dialog is accepted, with no restart.
+
 ## [2.6.0]
 
 ### Changed

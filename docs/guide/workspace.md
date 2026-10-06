@@ -28,6 +28,9 @@ with **Save config to workspace**:
 - the ions used in the calibration stage;
 - the mass list.
 
+The **General** settings tab also holds the interface theme — **Follow system**,
+**Light** or **Dark**.
+
 **Load config from workspace** imports configuration from another workspace
 file. The config can also be saved as an `.Orbitool` workspace and reloaded —
 loading it restores all related widgets.

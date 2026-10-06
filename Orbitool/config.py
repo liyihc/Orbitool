@@ -25,6 +25,7 @@ if multi_cores < 1:
 
 class General(BaseModel):
     default_select: bool = True
+    color_scheme: Literal["system", "light", "dark"] = "light"
     time_format: str = r"%Y-%m-%d %H:%M:%S"
     export_time_format: str = r"%Y%m%d_%H%M%S"
     multi_cores: int = multi_cores
@@ -79,6 +80,15 @@ class _Setting(BaseModel):
 
     def save_setting(self):
         config_path.write_text(self.model_dump_json(indent=4))
+
+    def apply_color_scheme(self, app):
+        from PyQt6 import QtCore
+        schemes = {
+            "system": QtCore.Qt.ColorScheme.Unknown,
+            "light": QtCore.Qt.ColorScheme.Light,
+            "dark": QtCore.Qt.ColorScheme.Dark,
+        }
+        app.styleHints().setColorScheme(schemes[self.general.color_scheme])
 
     def update_from(self, new_config: "_Setting"):
         for key in type(new_config).model_fields.keys():
