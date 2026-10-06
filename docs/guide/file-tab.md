@@ -44,6 +44,14 @@ tick **auto**, or **adjust to selected files**.
 These buttons configure the averaging; they do **not** start a calculation. The
 actual averaging runs when spectra are added.
 
+A scan whose FT profile is empty — a damaged or interrupted acquisition — cannot be
+averaged. It is left out of its window instead of aborting the run. The noise tab,
+where spectra are actually read, lists the files it had to repair in a **Damaged .RAW
+files** dialog whenever it reads them (they also appear in `log.txt`), so a repaired
+spectrum is never handed over silently. Nothing else about such a scan looks wrong: its
+TIC and every acquisition field match the healthy scans, so that report is the only way
+to notice the damage.
+
 ## Shortcuts
 
 | Key | Action |

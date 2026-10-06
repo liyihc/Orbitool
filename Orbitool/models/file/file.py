@@ -7,7 +7,8 @@ from typing import Dict, Iterable, List, Optional, Tuple, TypedDict, Union
 import numpy as np
 
 from Orbitool.base import BaseRowStructure, BaseDatasetStructure, BaseStructure, JSONObject
-from Orbitool.utils.readers import ThermoFile, spectrum_filter
+from Orbitool.utils.readers import (DamagedScansByFile, ThermoFile,
+                                    spectrum_filter)
 
 from ..spectrum import spectrum
 from .part_file import (generate_periods, generate_num_periods,
@@ -249,18 +250,40 @@ class FileSpectrumInfo(spectrum.SpectrumInfo):
                     info_list.append(info)
         return info_list
 
-    def get_spectrum_from_info(self, rtol: float = 1e-6, with_minutes=False, last_reader: Optional["LastReader"] = None):
+    def get_spectrum_from_info(self, rtol: float = 1e-6, with_minutes=False,
+                               last_reader: Optional["LastReader"] = None, *,
+                               damaged: DamagedScansByFile):
+        """Read this window's spectrum.
+
+        `damaged` is the record of the read pass this call belongs to, keyed by .RAW
+        path: the scans this file cannot average are left out of the window and added
+        under `self.path`, for the caller to report once the pass is over.
+        """
         if last_reader and last_reader.get("path", None) == self.path:
             reader = last_reader["reader"]
         else:
+            # The caller handed us the previous reader only so we could reuse it, so
+            # it is being replaced here: release its file handle now instead of
+            # waiting for garbage collection. Holding one costs about 11 MB of working
+            # set and a few handles for a 15.8 MB .RAW, and nothing guarantees the
+            # caller drops it soon -- the previous reader of another .RAW would
+            # otherwise stay open for the rest of the read.
+            if last_reader is not None:
+                last_reader["reader"].close()
             origin, realpath = self.path.split(':', 1)
             if origin == PATH_TYPE.THERMO.value:
                 reader = ThermoFile(realpath)
-        ret = reader.getAveragedSpectrumInTimeRange(
+        # The reader hands back the scans it could not average. Only real findings are
+        # filed: a file that merely read cleanly must never end up in the record, or it
+        # would be reported as damaged for having been read.
+        mz, intensity, damagedScans = reader.getAveragedSpectrumInTimeRange(
             self.start_time, self.end_time, rtol, self.filter, self.stats_filter)  # type: ignore
-        if ret is None:
+        if damagedScans:
+            damaged.setdefault(self.path, {}).update(damagedScans)
+        if mz is None:
+            # Nothing was averaged, so no reader is handed back either.
+            reader.close()
             return None, None
-        mz, intensity = ret
         if not with_minutes:
             return (mz, intensity), LastReader(path=self.path, reader=reader)
         minutes = min(self.end_time, reader.endDatetime) - \

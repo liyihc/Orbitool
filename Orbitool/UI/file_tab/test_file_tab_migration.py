@@ -96,9 +96,9 @@ def test_addThermoFile_error_recovers_before_dialog(env):
     # replaces the old recovery handler on addThermoFile: refresh the table,
     # then re-raise so the framework logs, dialogs once, and releases the
     # count. The queued answer makes the worker fail before any ThermoFile
-    # is built -- a failing ThermoFile.__init__ leaves a half-built object
-    # whose __del__ raises (pre-existing thermo.py noise, out of scope
-    # here, so sidestepped)
+    # is built, so this exercises the handler and nothing else -- a
+    # half-built ThermoFile is harmless now that __del__ only calls the
+    # never-raising File.close()
     calls = []
     _install_refresh_spy(env, calls)
     try:

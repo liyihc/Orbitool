@@ -44,6 +44,19 @@ Parameters: **quantile**, **N sigma**, and **size-dependent** handling.
 If you do not want to denoise at all, press **skip** (`Alt + P`). If you want to
 denoise only around certain mass points, set global noise and LOD to `-1`.
 
+### Damaged files
+
+A `.RAW` can contain a scan whose FT profile is empty — a damaged or interrupted
+acquisition. Such a scan cannot be averaged, so it is left out of its window (the
+window keeps its other scans) instead of failing the whole read. Nothing else about
+the scan looks wrong: its TIC and every acquisition field match the healthy scans.
+
+Every read reports what it had to repair. Each **denoise** or **skip** run ends by
+listing the files it found damaged in a **Damaged .RAW files** dialog, and pressing
+**show average** says so the same way — nothing is ever repaired silently. The list
+belongs to that read only: it is shown once and then forgotten, so a later read repairs
+the same file again and reports it again. `log.txt` is the permanent record.
+
 ## Export
 
 - **Denoised spectrum** (`Ctrl + Alt + D`)

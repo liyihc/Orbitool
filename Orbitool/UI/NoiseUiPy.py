@@ -1,4 +1,5 @@
 import csv
+import os
 from collections import deque
 from copy import copy
 from tkinter import W
@@ -18,6 +19,7 @@ from Orbitool.models.formula import Formula
 from Orbitool.models.spectrum import Spectrum
 from Orbitool.models.workspace import WorkSpace
 from Orbitool.utils import binary_search
+from Orbitool.utils.readers import thermo
 
 from . import NoiseUi, component
 from .component import factory
@@ -27,6 +29,35 @@ from .utils import (TableUtils, get_tablewidget_selected_row, savefile, set_head
 
 
 TAG = "NoiseUiPy"
+
+
+def damagedFilesMessage(damaged: thermo.DamagedScansByFile) -> str:
+    """Text describing the damaged files a read pass collected, keyed by .RAW path."""
+    lines = []
+    for path, scans in sorted(damaged.items()):
+        grouped = thermo.groupScansByReason(scans)
+        detail = ", ".join(f"{len(numbers)} x {reason}"
+                           for reason, numbers in sorted(grouped.items()))
+        numbers = ", ".join(str(i) for i in sorted(scans))
+        lines.append(f"- {os.path.basename(path)}: {detail} (scan {numbers})")
+    return ("These .RAW files contain scans that cannot be averaged. Those scans were "
+            "left out of the affected windows, so those spectra use fewer scans than "
+            "the rest. The files are probably damaged -- re-exporting or re-acquiring "
+            "them is worth considering:\n\n" + "\n".join(lines))
+
+
+def reportDamagedFiles(damaged: thermo.DamagedScansByFile):
+    """Show one dialog for the damage a finished read collected, if there is any.
+
+    Only files with at least one un-averageable scan are reported: an entry with no
+    scan in it means nothing was found, and reporting it would blame a healthy file.
+    The record belongs to that read: this is the only thing that displays it, and it is
+    dropped as soon as the dialog closes. Everything stays in `log.txt`.
+    """
+    found = {path: scans for path, scans in damaged.items() if scans}
+    if found:
+        showInfo(damagedFilesMessage(found), "Damaged .RAW files")
+
 
 class Widget(QtWidgets.QWidget):
     selected_spectrum_average = QtCore.pyqtSignal(Spectrum)
@@ -101,10 +132,18 @@ class Widget(QtWidgets.QWidget):
 
     @ui_task
     async def showSelectedSpectrum(self):
-        await self.readSelectedSpectrum()
+        # Reading for the plot repairs damaged windows too, and a spectrum built from
+        # fewer scans than the file has must never be shown without saying so.
+        damaged: thermo.DamagedScansByFile = {}
+        await self.readSelectedSpectrum(damaged)
         self.ui.toolBox.setCurrentIndex(0)
+        reportDamagedFiles(damaged)
 
-    async def readSelectedSpectrum(self):
+    async def readSelectedSpectrum(self, damaged: thermo.DamagedScansByFile):
+        """Read the selected spectrum, recording what it cannot average in `damaged`.
+
+        The caller owns the record and reports it once its own read is over.
+        """
         workspace = self.manager.workspace
         index = self.manager.getters.spectra_list_selected_index.get()
         info_list = workspace.info.file_tab.spectrum_infos
@@ -121,7 +160,7 @@ class Widget(QtWidgets.QWidget):
         def read_and_average():
             spectra: List[Tuple[np.ndarray, np.ndarray, float]] = []
             for info in infos:
-                spectrum, _ = info.get_spectrum_from_info(rtol, True)
+                spectrum, _ = info.get_spectrum_from_info(rtol, True, damaged=damaged)
                 if spectrum is not None:
                     spectra.append(spectrum)
             if len(spectra) > 0:
@@ -469,8 +508,12 @@ class Widget(QtWidgets.QWidget):
 
         s = await background(func, "doing denoise")
 
-        read_from_file = ReadFromFile(self.manager.workspace)
+        # The record of this whole denoise: the read pass fills it, the report below
+        # shows it once, and it is dropped with this call.
+        damaged: thermo.DamagedScansByFile = {}
+        read_from_file = ReadFromFile(self.manager.workspace, read_kwargs={"damaged": damaged})
         await background(read_from_file, "read and average all spectra")
+        reportDamagedFiles(damaged)
 
         noise_setting.subtract = subtract
         noise_setting.spectrum_dependent = self.ui.dependentCheckBox.isChecked()
@@ -480,11 +523,16 @@ class Widget(QtWidgets.QWidget):
 
     @ui_task
     async def skip(self):
-        await background(ReadFromFile(self.manager.workspace), "read and average all spectra")
+        # One record for this whole skip, shared by both reads below, so the dialog
+        # shows each damaged file once and only what this skip found.
+        damaged: thermo.DamagedScansByFile = {}
+        await background(ReadFromFile(self.manager.workspace, read_kwargs={"damaged": damaged}),
+                         "read and average all spectra")
         info = self.info
         info.skip = True
         if info.current_spectrum is None:
-            await self.readSelectedSpectrum()
+            await self.readSelectedSpectrum(damaged)
+        reportDamagedFiles(damaged)
         self.callback.emit((info.current_spectrum,))
 
     @ui_task
@@ -648,12 +696,13 @@ class ReadFromFile(MultiProcess):
         return info, spectrum
 
     @staticmethod
-    def read(file: WorkSpace, **kwargs) -> Generator:
+    def read(file: WorkSpace, damaged: thermo.DamagedScansByFile, **kwargs) -> Generator:
         rtol = file.info.file_tab.rtol
         cnt = 0
         last_reader = None
         for info in file.info.file_tab.spectrum_infos:
-            data, last_reader = info.get_spectrum_from_info(rtol, last_reader=last_reader)
+            data, last_reader = info.get_spectrum_from_info(
+                rtol, last_reader=last_reader, damaged=damaged)
             if info.average_index and info.average_index != cnt:
                 info = copy(info)
                 info.average_index = cnt

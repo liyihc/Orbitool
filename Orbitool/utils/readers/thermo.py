@@ -46,6 +46,25 @@ from ThermoFisher.CommonCore.Data import ToleranceUnits, Extensions
 
 TAG = "ThermoReader"
 
+# Raw scan number -> why it cannot be averaged: the scans of one .RAW file that a read
+# has proven unusable. A read hands them back with the spectrum it produced, and its
+# caller keeps them only until it has shown them to the user, so nothing survives the
+# read that found them.
+DamagedScans = Dict[int, str]
+DamagedScansByFile = Dict[str, DamagedScans]
+
+
+def groupScansByReason(scans: Dict[int, str]) -> Dict[str, List[int]]:
+    """Invert a {scan number: reason} mapping into {reason: [scan numbers]}.
+
+    The one place that groups damaged scans, so the log line and the dialog cannot
+    drift apart. Scan numbers come out in order.
+    """
+    grouped: Dict[str, List[int]] = {}
+    for scan, reason in sorted(scans.items()):
+        grouped.setdefault(reason, []).append(scan)
+    return grouped
+
 
 def initRawFile(path):
     rawfile = RawFileReaderAdapter.FileFactory(str(path))
@@ -190,15 +209,24 @@ class File:
                 return False
         return True
 
-    def getAveragedSpectrumInTimeRange(self, start: datetime, end: datetime, rtol, filter: SpectrumFilter, stats_filter: StatsFilters):
+    def getAveragedSpectrumInTimeRange(self, start: datetime, end: datetime, rtol, filter: SpectrumFilter,
+                                       stats_filter: StatsFilters):
+        """Average this window and say which of its scans had to be left out.
+
+        Returns `(mass, intensity, damagedScans)`, where `damagedScans` is empty unless a
+        scan could not be averaged. `mass` is None when the window produced no spectrum
+        at all; `damagedScans` is returned in that case too, because the scans that
+        could not be averaged are exactly what the caller needs to report.
+        """
         # Due to a bug related to scan time during data acquisition, AverageScansInTimeRange should not be used
         # averaged = Extensions.AverageScansInTimeRange(self.rawfile, start, end, scanfilter, MassOptions(rtol, ToleranceUnits.ppm))
         startNum, stopNum = list(
             map(self.getRawScanNum, self.datetimeRange2ScanNumRange((start, end))))
         if self._getFirstFilterInRawNumRange(startNum, stopNum, filter) is None:
-            return
+            return None, None, {}
         average_list = CSharpList[Int32]()
         cnt = 0
+        accepted: List[int] = []
         for i in range(startNum, stopNum):
             i_filter = self.getSpectrumFilter(i, True)
             if not spectrum_filter.filter_match(i_filter, filter):
@@ -209,21 +237,106 @@ class File:
                     continue
             average_list.Add(i)
             cnt += 1
+            accepted.append(i)
 
         if cnt == 0:
             logger.d(TAG, "getAveragedSpectrumInTimeRange() empty list, skip")
-            return
-        averaged = Extensions.AverageScans(
-            self.rawfile, average_list, MassOptions(rtol, ToleranceUnits.ppm))
+            return None, None, {}
+        # A damaged or interrupted acquisition can leave a scan whose FT profile is
+        # empty (field case: 2 of 87 scans of one acquisition). Nothing in its metadata
+        # gives it away -- its TIC and every trailer field match the healthy scans, and
+        # only the profile length does -- so the .NET averager throws
+        # IndexOutOfRangeException from CalculateTargetSpectrumParameters without
+        # naming the scan it choked on. Reading every profile up front to look for them
+        # costs about as much as the averaging itself, so they are learned here, from
+        # the failure.
+        #
+        # This is damage repair, not error handling: an empty profile cannot contribute
+        # to any average, so leaving those scans out keeps the window and its point in
+        # time instead of losing both.
+        damaged: DamagedScans = {}
+        try:
+            averaged = Extensions.AverageScans(
+                self.rawfile, average_list, MassOptions(rtol, ToleranceUnits.ppm))
+        except Exception as e:
+            # Diagnose what this window offered, and keep the scans we can prove are
+            # damaged together with the reason.
+            for i in accepted:
+                reason = self._damageReason(i)
+                if reason is not None:
+                    damaged[i] = reason
+            if not damaged:
+                raise
+            keep = [i for i in accepted if i not in damaged]
+            grouped = groupScansByReason(damaged)
+            detail = "; ".join(f"{reason}: {scans}"
+                               for reason, scans in sorted(grouped.items()))
+            outcome = (f"{len(keep)} scans averaged" if keep
+                       else "no usable scan left, the window is dropped")
+            logger.w(TAG, f"{self.name}: {len(damaged)} of {cnt} scans in "
+                         f"{start}~{end} have no FT profile data "
+                         f"(from {type(e).__name__}), {outcome} -- {detail}")
+            if not keep:
+                return None, None, damaged
+            average_list = CSharpList[Int32]()
+            for i in keep:
+                average_list.Add(i)
+            averaged = Extensions.AverageScans(
+                self.rawfile, average_list, MassOptions(rtol, ToleranceUnits.ppm))
         if averaged is None:
-            return
+            return None, None, damaged
         averaged = averaged.SegmentedScan
         mass = np.fromiter(averaged.Positions, np.float64)
         intensity = np.fromiter(averaged.Intensities, np.float64)
-        return mass, intensity
+        return mass, intensity, damaged
+
+    def _damageReason(self, rawScanNum: int) -> str | None:
+        """Why this scan cannot go into an average, or None if nothing is wrong with it.
+
+        The single place that knows every way a scan can be unusable, so callers record
+        a diagnosis instead of guessing at one. Today there is one case: a damaged or
+        interrupted acquisition can leave a scan whose SegmentedScan is empty while its
+        metadata (TIC, filter, every trailer field) looks perfectly normal. Only the
+        profile length reveals it, and Extensions.AverageScans throws
+        IndexOutOfRangeException from CalculateTargetSpectrumParameters because of it.
+
+        This runs while handling a failure, so it must never raise: a scan we cannot
+        diagnose is reported as fine (None), which leaves the caller's original
+        exception to propagate instead of replacing it with this one.
+        """
+        try:
+            stats = self.rawfile.GetScanStatsForScanNumber(rawScanNum)
+            points = int(self.rawfile.GetSegmentedScanFromScanNumber(
+                rawScanNum, stats).Positions.Length)
+        except Exception:
+            return None
+        if points == 0:
+            return "no FT profile data"
+        return None
+
+    def close(self):
+        """Release the reader's native file handle and mapped file.
+
+        Holding a reader costs about 11 MB of working set and a few handles for a
+        15.8 MB file, so it is worth releasing as soon as the reader is dropped;
+        that is what __del__ does.
+
+        __del__ can also run during interpreter shutdown, when pythonnet's binding
+        layer is already torn down and Dispose() then raises `TypeError:
+        'MethodObject' object is not callable`. A deallocator must never raise, and
+        at that point the process is ending anyway, so a failure is swallowed.
+        """
+        rawfile = getattr(self, "rawfile", None)
+        if rawfile is None:
+            return
+        self.rawfile = None
+        try:
+            rawfile.Dispose()
+        except Exception:
+            pass
 
     def __del__(self):
-        self.rawfile.Dispose()
+        self.close()
 
     def get_spectrum_stats(self, scan_num, is_raw_scan_num=False):
         if not is_raw_scan_num:
