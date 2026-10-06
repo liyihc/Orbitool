@@ -1,11 +1,13 @@
+import os
 from functools import partial
-from typing import DefaultDict, Dict, Iterable, List, Optional, Union, cast
+from typing import DefaultDict, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from Orbitool import utils
+from Orbitool import logger, utils
 from Orbitool.models.file import FileSpectrumInfo, Path, PathList
 from Orbitool.UI.utils.utils import TableUtils
+from Orbitool.utils.readers import NoMassSpectrometerError
 
 from .. import utils as UiUtils
 from ..manager import Manager, Thread, ui_task, background, progress
@@ -13,6 +15,8 @@ from ..utils import DragHelper, set_header_sizes, showInfo
 from . import FileUi
 from .table_filter_helper import TableFilterHelper
 from .utils import str2timedelta
+
+TAG = "FileUiPy"
 
 
 class Widget(QtWidgets.QWidget):
@@ -79,6 +83,37 @@ class Widget(QtWidgets.QWidget):
         if refresh_filters:
             self.filter_helper.show_filter()
 
+    def _importRawFiles(self, filepaths: Iterable[str]) -> List[Tuple[str, str]]:
+        """Import each readable file, collecting the rest instead of aborting.
+
+        One unusable `.RAW` -- e.g. a file with no MS data -- must not sink a
+        whole batch or folder, so the files that could not be read are returned
+        with their reason for the caller to report once the import is over.
+        """
+        pathlist = self.pathlist
+        info = self.info
+        skipped: List[Tuple[str, str]] = []
+        for filepath in filepaths:
+            try:
+                path = pathlist.addThermoFile(filepath)
+                for f in path.getFileHandler().getUniqueFilters():
+                    info.add_filter(f)
+            except NoMassSpectrometerError as e:
+                skipped.append((filepath, str(e)))
+                logger.w(TAG, f"skipping unreadable .RAW {filepath}: {e}")
+        pathlist.sort()
+        self.filter_helper.refresh_filter_polarity()
+        return skipped
+
+    def _reportSkippedFiles(self, skipped: List[Tuple[str, str]]):
+        """Show one dialog for the files an import could not read, if any."""
+        if not skipped:
+            return
+        lines = "\n".join(f"- {os.path.basename(filepath)}: {reason}"
+                          for filepath, reason in skipped)
+        showInfo("These .RAW files could not be read and were left out of the "
+                 "import:\n\n" + lines, "Unreadable .RAW files")
+
     @ui_task
     async def edit_period(self):
         from .CustomPeriodUiPy import Dialog
@@ -98,23 +133,12 @@ class Widget(QtWidgets.QWidget):
         try:
             files = UiUtils.openfiles(
                 "Select one or more files", "RAW files(*.RAW)")
-            pathlist = self.pathlist
 
-            info = self.info
-
-            def func():
-                for f in files:
-                    path = pathlist.addThermoFile(f)
-                    for filter in path.getFileHandler().getUniqueFilters():
-                        info.add_filter(filter)
-
-                pathlist.sort()
-                self.filter_helper.refresh_filter_polarity()
-                return len(pathlist.paths)
-
-            length = await background(func, "read files")
+            skipped = await background(
+                lambda: self._importRawFiles(files), "read files")
 
             self._refresh_paths()
+            self._reportSkippedFiles(skipped)
         except Exception:
             self._refresh_paths(refresh_filters=False)
             raise
@@ -125,20 +149,17 @@ class Widget(QtWidgets.QWidget):
             ret, folder = UiUtils.openfolder("Select one folder")
             if not ret:
                 return
-            pathlist = self.pathlist
-            info = self.info
+            recurrent = self.ui.recursionCheckBox.isChecked()
 
             def func():
-                for path in progress.tqdm(utils.files.FolderTraveler(folder, ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
-                    p = pathlist.addThermoFile(path)
-                    for filter in p.getFileHandler().getUniqueFilters():
-                        info.add_filter(filter)
-                pathlist.sort()
-                self.filter_helper.refresh_filter_polarity()
+                return self._importRawFiles(progress.tqdm(
+                    utils.files.FolderTraveler(
+                        folder, ext=".RAW", recurrent=recurrent)))
 
-            await background(func, "read folders")
+            skipped = await background(func, "read folders")
 
             self._refresh_paths()
+            self._reportSkippedFiles(skipped)
         except Exception:
             self._refresh_paths()
             raise
@@ -160,23 +181,21 @@ class Widget(QtWidgets.QWidget):
     async def tableDropEvent(self, event: QtGui.QDropEvent):
         data = event.mimeData()
         paths = list(self.drag_helper.yield_file(data))
-        info = self.info
+        recurrent = self.ui.recursionCheckBox.isChecked()
 
-        def func():
-            pathlist = self.pathlist
+        def rawFiles():
             for p in paths:
                 if p.is_dir():
-                    for path in progress.tqdm(utils.files.FolderTraveler(str(p), ext=".RAW", recurrent=self.ui.recursionCheckBox.isChecked())):
-                        for filter in pathlist.addThermoFile(path).getFileHandler().getUniqueFilters():
-                            info.add_filter(filter)
+                    yield from progress.tqdm(utils.files.FolderTraveler(
+                        str(p), ext=".RAW", recurrent=recurrent))
                 elif p.suffix.lower() == ".raw":
-                    for filter in pathlist.addThermoFile(str(p)).getFileHandler().getUniqueFilters():
-                        info.add_filter(filter)
-            pathlist.sort()
-            self.filter_helper.refresh_filter_polarity()
-        await background(func, "read files")
+                    yield str(p)
+
+        skipped = await background(
+            lambda: self._importRawFiles(rawFiles()), "read files")
 
         self._refresh_paths()
+        self._reportSkippedFiles(skipped)
 
     @ui_task
     async def removePath(self):

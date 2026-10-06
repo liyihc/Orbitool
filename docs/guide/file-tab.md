@@ -13,6 +13,10 @@ works on.
 - ![Drag and drop a folder](img/dragdrop-folder.gif)
 - Choose the **polarity** (positive or negative) of your spectra.
 - **Remove selected** (`Del`) drops the selected files from the table.
+- A `.RAW` with no mass-spectrometer data cannot be read; it is left out of the
+  import — the rest of the batch or folder is still imported — and listed
+  afterwards in an **Unreadable .RAW files** dialog (it also appears in
+  `log.txt`).
 
 ## Filter and pick
 

@@ -33,6 +33,20 @@ on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   **Light** and **Dark**. It selects the Qt color scheme; **Light** stays the
   default. The choice takes effect when the dialog is accepted, with no restart.
 
+### Fixed
+
+- Peak splitting no longer aborts calibration or peak fitting with `ValueError:
+  Buffer dtype mismatch, expected 'int32' but got 'long long'`. When a cut
+  spectrum did not fall back to zero at its right edge (or did not rise from zero
+  at its left), the boundary index appended to the peak range was built as a
+  64-bit integer and rejected by the function's 32-bit index array on numpy 2.x;
+  it now keeps the array's `int32` type.
+- Importing files or a folder no longer fails for the whole batch when one `.RAW`
+  has no mass-spectrometer data — the .NET reader raises
+  `ArgumentOutOfRangeException: Instrument index not available` on such a file.
+  The file is skipped, the rest are imported, and the skipped files are listed in
+  one **Unreadable .RAW files** dialog (and in `log.txt`) when the import ends.
+
 ## [2.6.0]
 
 ### Changed

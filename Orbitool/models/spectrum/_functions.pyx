@@ -38,9 +38,9 @@ def splitPeaks(np.ndarray[floats,ndim=1] mz, np.ndarray[floats,ndim=1] intensity
     cdef np.ndarray[int32,ndim=1] l = index[:-1][peaksIndex[1:] > peaksIndex[:-1]]
     cdef np.ndarray[int32,ndim=1] r = index[1:][peaksIndex[:-1] > peaksIndex[1:]] + 1
     if len(l) < len(r):
-        l = np.append((start,), l)
+        l = np.append(np.array((start,), dtype=np.int32), l)
     elif len(l) > len(r):
-        r = np.append(r, np.array((stop,)))
+        r = np.append(r, np.array((stop,), dtype=np.int32))
     return np.stack((l, r), 1)
 
 @cython.boundscheck(False)

@@ -68,8 +68,21 @@ def groupScansByReason(scans: Dict[int, str]) -> Dict[str, List[int]]:
     return grouped
 
 
+class NoMassSpectrometerError(Exception):
+    """A .RAW holds no mass-spectrometer data, so it yields no spectrum.
+
+    Some files carry only other devices (e.g. UV/PDA) or otherwise lack the MS
+    instrument that `SelectInstrument(Device.MS, 1)` asks for; the .NET reader
+    then throws `ArgumentOutOfRangeException: Instrument index not available`.
+    Raised here so an import can leave such a file out instead of failing.
+    """
+
+
 def initRawFile(path):
     rawfile = RawFileReaderAdapter.FileFactory(str(path))
+    if rawfile.GetInstrumentCountOfType(Device.MS) < 1:
+        rawfile.Dispose()
+        raise NoMassSpectrometerError("no MS instrument data")
     rawfile.SelectInstrument(Device.MS, 1)
     rawfile.IncludeReferenceAndExceptionData = True
     return rawfile

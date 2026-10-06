@@ -9,6 +9,7 @@ answered through Orbitool.UI.utils.test.input, the period/detail dialogs
 are stubbed where they would exec() a nested event loop, and drag & drop
 goes through a stubbed DragHelper.
 """
+import os
 from datetime import datetime
 
 import pytest
@@ -63,6 +64,35 @@ def _remove_refresh_spy(state):
     del state.helper.show_filter
 
 
+def _stub_unreadable_import(monkeypatch, recorded):
+    """Make `PathList.addThermoFile` reject files named `bad*` with the reader's
+    `NoMassSpectrometerError`, and capture the FileUiPy report instead of showing
+    it (which would block, since the harness only patches the framework's own
+    `showInfo`). `recorded` collects each `(content, cap)`."""
+    from Orbitool.models.file.file import PathList
+    from Orbitool.utils.readers import NoMassSpectrometerError
+    from . import FileUiPy as FileUiPy_module
+
+    monkeypatch.setattr(
+        FileUiPy_module, "showInfo",
+        lambda content, cap=None: recorded.append((content, cap)))
+
+    class _Handler:
+        def getUniqueFilters(self):
+            return []
+
+    class _StubPath:
+        def getFileHandler(self):
+            return _Handler()
+
+    def fake_add(self, filepath):
+        if os.path.basename(filepath).lower().startswith("bad"):
+            raise NoMassSpectrometerError("no MS instrument data")
+        return _StubPath()
+
+    monkeypatch.setattr(PathList, "addThermoFile", fake_add)
+
+
 def test_startup_clean_and_bindings_cached(env):
     assert env.startup_dialogs == []
     assert not env.manager.busy
@@ -89,6 +119,66 @@ def test_addFolder_success(env, tmp_path):
 
     assert env.dialogs == []
     assert env.busy == [True, False]
+    assert not env.manager.busy
+
+
+def test_addThermoFile_skips_unreadable_and_reports(env, monkeypatch):
+    # A .RAW with no MS instrument must not sink the whole import: the reader
+    # raises NoMassSpectrometerError, the file is skipped, and the batch reports
+    # it once instead of aborting.
+    recorded = []
+    _stub_unreadable_import(monkeypatch, recorded)
+
+    uitest.input(["good.raw", "bad.raw"])
+    env.filetab.ui.addFilePushButton.click()
+
+    assert env.dialogs == []  # no framework error dialog
+    assert len(recorded) == 1
+    content, cap = recorded[0]
+    assert "bad.raw" in content and "good.raw" not in content
+    assert cap == "Unreadable .RAW files"
+    assert not env.manager.busy
+
+
+def test_addFolder_skips_unreadable_and_reports(env, monkeypatch, tmp_path):
+    recorded = []
+    _stub_unreadable_import(monkeypatch, recorded)
+
+    (tmp_path / "good.RAW").write_text("x")
+    (tmp_path / "bad.RAW").write_text("x")
+    uitest.input((True, str(tmp_path)))
+    env.filetab.ui.addFolderPushButton.click()
+
+    assert env.dialogs == []
+    assert len(recorded) == 1
+    content, cap = recorded[0]
+    assert "bad.RAW" in content and "good.RAW" not in content
+    assert cap == "Unreadable .RAW files"
+    assert not env.manager.busy
+
+
+def test_tableDropEvent_skips_unreadable_and_reports(env, monkeypatch, tmp_path):
+    recorded = []
+    _stub_unreadable_import(monkeypatch, recorded)
+
+    dragged = [tmp_path / "good.raw", tmp_path / "bad.raw"]
+
+    class _FakeDragHelper:
+        def yield_file(self, data):
+            return iter(dragged)
+
+    class _FakeEvent:
+        def mimeData(self):
+            return None
+
+    monkeypatch.setattr(env.filetab, "drag_helper", _FakeDragHelper())
+    env.filetab.tableDropEvent(_FakeEvent())
+
+    assert env.dialogs == []
+    assert len(recorded) == 1
+    content, cap = recorded[0]
+    assert "bad.raw" in content and "good.raw" not in content
+    assert cap == "Unreadable .RAW files"
     assert not env.manager.busy
 
 
