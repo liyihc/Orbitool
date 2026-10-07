@@ -64,69 +64,36 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>export</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="exportSelectPushButton">
-       <property name="text">
-        <string>Select</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="exportAllPushButton">
-       <property name="text">
-        <string>All</string>
-       </property>
-      </widget>
-     </item>
+    <widget class="QGroupBox" name="groupBox_export">
+     <property name="title">
+      <string>Export</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_export">
       <item>
-       <widget class="QLabel" name="label_3">
+       <widget class="QPushButton" name="exportSelectPushButton">
         <property name="text">
-         <string>spectra</string>
+         <string>Select spectra</string>
         </property>
        </widget>
       </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_noise_lod">
       <item>
-       <widget class="QLabel" name="label_4">
+       <widget class="QPushButton" name="exportAllPushButton">
         <property name="text">
-         <string>export per-spectrum noise/LOD</string>
+         <string>All spectra</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="exportNoiseLODPushButton">
         <property name="text">
-         <string>noise &amp; LOD</string>
+         <string>Noise results</string>
         </property>
        </widget>
       </item>
      </layout>
-    </item>
-   </layout>
+    </widget>
+   </item>
+  </layout>
   </widget>
  <resources/>
  <connections/>

@@ -103,7 +103,7 @@ def test_noise_lod_export_writes_one_file_per_calibrated_spectrum(
     widget.exportNoiseLOD()
 
     assert env.dialogs == []
-    files = sorted(tmp_path.glob("noise_LOD*.csv"))
+    files = sorted(tmp_path.glob("noise_results*.csv"))
     assert len(files) == 2
     with open(files[0], newline="") as f:
         first = list(csv.reader(f))

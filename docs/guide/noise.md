@@ -74,8 +74,8 @@ All four write a CSV for the spectrum currently shown on the tab.
 - **Spectrum** (`Ctrl + Alt + S`) — the raw selected/averaged spectrum.
 - **Denoised spectrum** (`Ctrl + Alt + D`)
 - **Noise peaks** (`Ctrl + Alt + N`)
-- **Noise & LOD** (`Ctrl + Alt + L`) — the same global + per-mass-point table the
-  **Noise results** table shows, as `formula, mass, noise, LOD` columns.
+- **Noise results** (`Ctrl + Alt + L`) — the same global + per-mass-point table
+  the **Noise results** table shows, as `formula, mass, noise, LOD` columns.
 
 The per-spectrum tables for *every* calibrated spectrum are exported from the
 [Spectra List](dockers.md), not here.

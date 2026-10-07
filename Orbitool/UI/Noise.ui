@@ -308,7 +308,7 @@
               <item row="1" column="1">
                <widget class="QPushButton" name="exportNoiseLODPushButton">
                 <property name="text">
-                 <string>Noise &amp; LOD</string>
+                 <string>Noise results</string>
                 </property>
                 <property name="shortcut">
                  <string>Ctrl+Alt+L</string>

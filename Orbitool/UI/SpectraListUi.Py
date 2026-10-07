@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QComboBox,
-    QHBoxLayout, QHeaderView, QLabel, QPushButton,
-    QSizePolicy, QSpacerItem, QTableWidget, QTableWidgetItem,
+    QGroupBox, QHBoxLayout, QHeaderView, QLabel,
+    QPushButton, QSizePolicy, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QWidget)
 
 class Ui_Form(object):
@@ -58,49 +58,27 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.tableWidget)
 
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout.addItem(self.horizontalSpacer)
-
-        self.label_2 = QLabel(Form)
-        self.label_2.setObjectName(u"label_2")
-
-        self.horizontalLayout.addWidget(self.label_2)
-
-        self.exportSelectPushButton = QPushButton(Form)
+        self.groupBox_export = QGroupBox(Form)
+        self.groupBox_export.setObjectName(u"groupBox_export")
+        self.horizontalLayout_export = QHBoxLayout(self.groupBox_export)
+        self.horizontalLayout_export.setObjectName(u"horizontalLayout_export")
+        self.exportSelectPushButton = QPushButton(self.groupBox_export)
         self.exportSelectPushButton.setObjectName(u"exportSelectPushButton")
 
-        self.horizontalLayout.addWidget(self.exportSelectPushButton)
+        self.horizontalLayout_export.addWidget(self.exportSelectPushButton)
 
-        self.exportAllPushButton = QPushButton(Form)
+        self.exportAllPushButton = QPushButton(self.groupBox_export)
         self.exportAllPushButton.setObjectName(u"exportAllPushButton")
 
-        self.horizontalLayout.addWidget(self.exportAllPushButton)
+        self.horizontalLayout_export.addWidget(self.exportAllPushButton)
 
-        self.label_3 = QLabel(Form)
-        self.label_3.setObjectName(u"label_3")
-
-        self.horizontalLayout.addWidget(self.label_3)
-
-
-        self.verticalLayout.addLayout(self.horizontalLayout)
-
-        self.horizontalLayout_noise_lod = QHBoxLayout()
-        self.horizontalLayout_noise_lod.setObjectName(u"horizontalLayout_noise_lod")
-        self.label_4 = QLabel(Form)
-        self.label_4.setObjectName(u"label_4")
-
-        self.horizontalLayout_noise_lod.addWidget(self.label_4)
-
-        self.exportNoiseLODPushButton = QPushButton(Form)
+        self.exportNoiseLODPushButton = QPushButton(self.groupBox_export)
         self.exportNoiseLODPushButton.setObjectName(u"exportNoiseLODPushButton")
 
-        self.horizontalLayout_noise_lod.addWidget(self.exportNoiseLODPushButton)
+        self.horizontalLayout_export.addWidget(self.exportNoiseLODPushButton)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_noise_lod)
+        self.verticalLayout.addWidget(self.groupBox_export)
 
 
         self.retranslateUi(Form)
@@ -115,11 +93,9 @@ class Ui_Form(object):
         ___qtablewidgetitem.setText(QCoreApplication.translate("Form", u"start time", None))
         ___qtablewidgetitem1 = self.tableWidget.horizontalHeaderItem(1)
         ___qtablewidgetitem1.setText(QCoreApplication.translate("Form", u"end time", None))
-        self.label_2.setText(QCoreApplication.translate("Form", u"export", None))
-        self.exportSelectPushButton.setText(QCoreApplication.translate("Form", u"Select", None))
-        self.exportAllPushButton.setText(QCoreApplication.translate("Form", u"All", None))
-        self.label_3.setText(QCoreApplication.translate("Form", u"spectra", None))
-        self.label_4.setText(QCoreApplication.translate("Form", u"export per-spectrum noise/LOD", None))
-        self.exportNoiseLODPushButton.setText(QCoreApplication.translate("Form", u"noise & LOD", None))
+        self.groupBox_export.setTitle(QCoreApplication.translate("Form", u"Export", None))
+        self.exportSelectPushButton.setText(QCoreApplication.translate("Form", u"Select spectra", None))
+        self.exportAllPushButton.setText(QCoreApplication.translate("Form", u"All spectra", None))
+        self.exportNoiseLODPushButton.setText(QCoreApplication.translate("Form", u"Noise results", None))
     # retranslateUi
 

@@ -192,10 +192,10 @@ class Widget(QtWidgets.QWidget):
         if on_calibrate and not has_data:
             button.setToolTip(
                 "Calibrate with denoise (not skip) to record per-spectrum "
-                "noise/LOD, then re-open this workspace.")
+                "noise results, then re-open this workspace.")
         elif not on_calibrate:
             button.setToolTip(
-                "Switch to the Calibrate tab to export per-spectrum noise/LOD.")
+                "Switch to the Calibrate tab to export per-spectrum noise results.")
         else:
             button.setToolTip("")
 
@@ -203,14 +203,14 @@ class Widget(QtWidgets.QWidget):
     async def exportNoiseLOD(self):
         info = self.manager.workspace.info.calibration_tab
         if not info.noise_lod:
-            showInfo("No per-spectrum noise/LOD yet; calibrate first")
+            showInfo("No per-spectrum noise results yet; calibrate first")
             return
 
-        ret, folder = openfolder("choose a folder to place noise/LOD")
+        ret, folder = openfolder("choose a folder to place noise results")
         if not ret:
             return
 
-        folder = unique_export_subfolder(Path(folder), "exported-noise-LOD")
+        folder = unique_export_subfolder(Path(folder), "exported-noise-results")
 
         grouped = {}
         for row in info.noise_lod:
@@ -220,7 +220,7 @@ class Widget(QtWidgets.QWidget):
 
         def func():
             for index, spectrum in enumerate(progress.tqdm(spectra)):
-                filename = (f"noise_LOD {setting.format_export_time(spectrum.start_time)}"
+                filename = (f"noise_results {setting.format_export_time(spectrum.start_time)}"
                             f"-{setting.format_export_time(spectrum.end_time)}")
                 rows = [(row.formula, row.mass, row.noise, row.LOD)
                         for row in grouped.get(index, [])]

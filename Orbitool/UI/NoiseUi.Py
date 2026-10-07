@@ -350,7 +350,7 @@ class Ui_Form(object):
 #if QT_CONFIG(shortcut)
         self.exportNoisePeaksPushButton.setShortcut(QCoreApplication.translate("Form", u"Ctrl+Alt+N", None))
 #endif // QT_CONFIG(shortcut)
-        self.exportNoiseLODPushButton.setText(QCoreApplication.translate("Form", u"Noise & LOD", None))
+        self.exportNoiseLODPushButton.setText(QCoreApplication.translate("Form", u"Noise results", None))
 #if QT_CONFIG(shortcut)
         self.exportNoiseLODPushButton.setShortcut(QCoreApplication.translate("Form", u"Ctrl+Alt+L", None))
 #endif // QT_CONFIG(shortcut)

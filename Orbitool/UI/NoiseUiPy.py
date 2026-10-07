@@ -460,8 +460,8 @@ class Widget(QtWidgets.QWidget):
             return
 
         ret, f = savefile(
-            "Save Noise & LOD", "CSV file(*.csv)",
-            f"noise_LOD {spectrum.start_time.strftime(setting.general.export_time_format)}"
+            "Save Noise results", "CSV file(*.csv)",
+            f"noise_results {spectrum.start_time.strftime(setting.general.export_time_format)}"
             f"-{spectrum.end_time.strftime(setting.general.export_time_format)}.csv")
         if not ret:
             return
