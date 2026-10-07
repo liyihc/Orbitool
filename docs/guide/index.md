@@ -29,7 +29,7 @@ Calibration the analysis tabs are independent.
 | [Mass Defect Tab](mass-defect.md) | Mass-defect plots colored by DBE/element |
 | [Timeseries Tab](timeseries.md) | Extract intensity time series |
 | [Formula Calculation](formula.md) | Formula input/output and search settings |
-| [Dockers](dockers.md) | The Formula / Mass List / Spectra / Spectrum / Peak List panels |
+| [Dockers](dockers.md) | The Mass List / Spectra / Spectrum / Peak List panels |
 | [Workspace & Options](workspace.md) | Save/load workspaces and configuration |
 | [FAQ](faq.md) | Common problems |
 

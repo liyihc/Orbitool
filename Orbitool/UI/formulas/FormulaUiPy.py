@@ -47,9 +47,6 @@ class Widget(QtWidgets.QWidget):
         ui.isotopeTreeWidget.itemClicked.connect(self.isotope_item_clicked)
         ui.isotopeAddToolButton.clicked.connect(self.isotope_add)
 
-        ui.elementShowPushButton.clicked.connect(self.show_element_infos)
-        ui.elementHidePushButton.clicked.connect(lambda a: self.hide_element_infos())
-
         ui.elementTableWidget.itemClicked.connect(self.element_item_clicked)
         ui.elementAddToolButton.clicked.connect(self.element_add)
 
@@ -74,7 +71,7 @@ class Widget(QtWidgets.QWidget):
     def show_or_restore(self):
         self.show_info()
         self.show_isotopes()
-        self.hide_element_infos()
+        self.show_element_infos()
 
     def show_info(self):
         info = self.info
@@ -158,18 +155,7 @@ class Widget(QtWidgets.QWidget):
             tree.resizeColumnToContents(i)
     
     @ui_task(mode="light")
-    async def hide_element_infos(self, a:bool=True):
-        b = not a
-        ui = self.ui
-        ui.elementHidePushButton.setVisible(b)
-        ui.elementTableWidget.setVisible(b)
-        ui.elementLineEdit.setVisible(b)
-        ui.elementAddToolButton.setVisible(b)
-        
-
-    @ui_task(mode="light")
     async def show_element_infos(self):
-        self.hide_element_infos(False)
         ui = self.ui
         info = self.info
         gen = info.calc_gen

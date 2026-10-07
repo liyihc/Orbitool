@@ -2,7 +2,7 @@
 MassList, SpectraList, PeakList, MassDefect): the legacy generator tasks
 were rewritten as ui_task coroutines.
 
-The batch is the one that carries the five old `a`-mode sites in the
+The batch is the one that carries the four old `a`-mode sites in the
 Formula panel; that reset-on-completion mode used to clear a busy held by
 someone else. They map to `light` (never touch busy),
 so the tests pin that a light call during busy leaves the other holder's
@@ -54,7 +54,6 @@ def test_formula_light_sites_leave_other_busy_untouched(env):
     try:
         formula.update_calc()
         formula.show_element_infos()
-        formula.hide_element_infos()
         assert manager.busy is True
         assert env.busy == []        # light never emits a busy transition
         assert env.dialogs == []
@@ -78,7 +77,7 @@ def test_formula_light_item_clicked_forwards_signal_args(env):
 
 
 def test_formula_light_isotope_clicked_forwards_signal_args(env):
-    # the fifth former reset-mode site: emitting the real itemClicked signal
+    # another former reset-mode site: emitting the real itemClicked signal
     # forwards (item, column) and must not touch a held busy
     formula = env.window.formula
     manager = env.window.manager
@@ -121,12 +120,43 @@ def test_formula_calc_opens_result_window(env, monkeypatch):
         def show(self):
             captured["opened"] = True
 
+        def close(self):
+            pass
+
     monkeypatch.setattr(FormulaResultUiPy, "Window", _StubResultWin)
     formula.calc()
 
     assert captured.get("opened") is True
     assert env.busy == [True, False]
     assert env.dialogs == []
+
+
+def test_calc_recognizes_integer_mass():
+    # regression: a bare integer (e.g. "50") must be read as a mass, not fed
+    # to Formula() as a formula string
+    from types import SimpleNamespace
+
+    class _StubGen:
+        def generate(self):
+            return self
+
+        def get(self, mass, charge):
+            return []
+
+    info = SimpleNamespace(
+        formula_docker=SimpleNamespace(
+            calc_gen=_StubGen(), charge=0),
+        peak_fit_tab=SimpleNamespace(peaks=[]))
+    manager = SimpleNamespace(
+        workspace=SimpleNamespace(info=info))
+
+    _, mass, _, peak_index = FormulaResultUiPy.calc(manager, "50")
+    assert mass == 50.0
+    assert peak_index is None
+
+    _, mass2, formulas2, _ = FormulaResultUiPy.calc(manager, "CH4")
+    assert len(formulas2) == 1
+    assert abs(mass2 - Formula("CH4").mass()) < 1e-9
 
 
 # --------------------------------------------------------------------------

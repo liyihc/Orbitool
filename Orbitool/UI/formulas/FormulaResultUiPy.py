@@ -232,17 +232,18 @@ def peak_position(peaks: List[FittedPeak], index: int):
     return peaks[index].peak_position
 
 
-flt_pattern = re.compile(r"\d+(.\d+)")
+flt_pattern = re.compile(r"\d+(?:\.\d+)?")
 
 
 def calc(manager: Manager, input: str):
     info = manager.workspace.info
-    if flt_pattern.match(input):
-        mass = float(input)
+    text = input.strip()
+    if flt_pattern.fullmatch(text):
+        mass = float(text)
         formulas = info.formula_docker.calc_gen.generate().get(
             mass, info.formula_docker.charge)
     else:
-        formula = Formula(input)
+        formula = Formula(text)
         formulas = [formula]
         mass = formula.mass()
 

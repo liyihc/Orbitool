@@ -38,6 +38,8 @@ class Window(QtWidgets.QMainWindow):
         ui.configLoadAction.triggered.connect(self.loadConfig)
         ui.configSaveAction.triggered.connect(self.saveConfig)
 
+        ui.formulaAction.triggered.connect(self.open_formula)
+
         # tab widgets
         ui.abortPushButton.clicked.connect(self.abort_process)
 
@@ -69,15 +71,16 @@ class Window(QtWidgets.QMainWindow):
         self.timeseriesesTab = self.add_tab(
             TimeseriesesUiPy.Widget(manager), "Timeseries")
 
-        # docker widgets
+        # formula window
 
         self.formula = formulas.FormulaWidget(manager)
-        self.formulaDw = self.add_dock_widget(
-            "Formula", self.formula)
+        self.formula.setWindowTitle("Formula")
+
+        # docker widgets
 
         self.masslist = MassListUiPy.Widget(manager)
         self.massListDw = self.add_dock_widget(
-            "Mass List", self.masslist, self.formulaDw)
+            "Mass List", self.masslist)
 
         self.peakFitTab.show_masslist.connect(self.masslist.showMassList_CatchException)
 
@@ -127,10 +130,10 @@ class Window(QtWidgets.QMainWindow):
         return self.manager.workspace
 
     def set_busy(self, value):
-        self.ui.menubar.setDisabled(value)
+        self.ui.menuWorkspace.setDisabled(value)
+        self.ui.menuOrbitool.setDisabled(value)
         self.ui.tabWidget.setDisabled(value)
         self.ui.processWidget.setHidden(not value)
-        self.formula.setEnabled(True)
 
         if not value:
             for bar in self.progress_bars.values():
@@ -151,7 +154,15 @@ class Window(QtWidgets.QMainWindow):
         self.ui.tabWidget.addTab(widget, title)
         return widget
 
+    def open_formula(self):
+        self.formula.show()
+        self.formula.raise_()
+        self.formula.activateWindow()
+
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        self.formula.close()
+        if self.manager.formulas_result_win is not None:
+            self.manager.formulas_result_win.close()
         self.manager.save.emit()
         self.workspace.close()
         e.accept()

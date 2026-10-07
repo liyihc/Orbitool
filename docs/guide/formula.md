@@ -1,6 +1,6 @@
 # Formula Calculation
 
-The [Formula docker](dockers.md#formula) hides and shows this calculator.
+The **Formula** item in the menu bar opens this calculator as a window.
 
 ## Formula format
 
@@ -44,7 +44,7 @@ Formula guessing is controlled by:
   exceed this value.
 - **isotopes** — the elements/isotopes used, each with **min**/**max** and
   **attrs**.
-- **element infos** — per-element parameters, shown with **show infos**.
+- **element infos** — per-element parameters, edited in the table.
 
 ## Calculate
 

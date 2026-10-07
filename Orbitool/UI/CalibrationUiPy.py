@@ -129,7 +129,7 @@ class Widget(QtWidgets.QWidget):
         ui = self.ui
         separator = ui.separatorDoubleSpinBox.value()
         formula_info = self.manager.workspace.info.formula_docker
-        assert formula_info.mz_min < separator < formula_info.mz_max, "please check mz range in formula docker"
+        assert formula_info.mz_min < separator < formula_info.mz_max, "please check mz range in the Formula calculator"
         self.info.add_segment(separator)
         self.showSegments()
         self.showCurrentSegment()

@@ -5,12 +5,6 @@ floating windows or stacked:
 
 <img src="img/dockers-draged-out.png" alt="A docker dragged out" width="45%"> <img src="img/dockers-stack.png" alt="Dockers stacked" width="45%">
 
-## Formula
-
-The single formula calculator. **Double-clicking** the result table shows the
-natural isotope distribution; double-clicking an isotope row saves that formula
-to a peak. See [Formula Calculation](formula.md).
-
 ## Mass List
 
 Orbitool uses the mass list to fit peaks and calculate time series.
