@@ -33,6 +33,9 @@ def _assert_time_series(workspace: WorkSpace, era: str):
     assert [[f for f in item.formulas] for item in series] == expected_formulas
 
     for item in series:
+        # pre-existing files carry no `rtol`: the reader must default it, so the
+        # tag stays unchanged instead of gaining a fabricated ppm
+        assert item.rtol == 0.0
         if era == "2.4.3":
             np.testing.assert_array_equal(
                 item.positions, legacy.SERIES_POSITIONS)
@@ -47,6 +50,9 @@ def _assert_time_series(workspace: WorkSpace, era: str):
         assert rows[0].time_min == legacy.TIMES[0]
         assert rows[0].time_max == legacy.TIMES[-1]
         assert rows[0].formulas == [Formula("NO3-")]
+        # the row was written before `rtol` existed: default it, keep the old tag
+        assert rows[0].rtol == 0.0
+        assert rows[0].get_name() == "O3N-"
     else:
         # an empty table: the time-series UI rebuilds the rows on open
         assert rows == []

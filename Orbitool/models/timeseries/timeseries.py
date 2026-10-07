@@ -10,6 +10,10 @@ class TimeSeries(BaseDatasetStructure):
     position_min: float
     position_max: float
 
+    # 0.0 means "no tolerance recorded" (legacy files, or a hand-built /
+    # range-sum series); a real tolerance is always > 0, which is what
+    # `get_name` keys the ppm suffix off.
+    rtol: float = 0.0
     range_sum: bool = False
     formulas: FormulaList = []
 
@@ -25,7 +29,7 @@ class TimeSeries(BaseDatasetStructure):
     @classmethod
     def FactoryPositionRtol(cls, position: float, rtol: float, formulas: List[Formula] = []):
         delta = position * rtol
-        return cls(position_min=position - delta, position_max=position + delta, range_sum=False, formulas=formulas.copy())
+        return cls(position_min=position - delta, position_max=position + delta, rtol=rtol, range_sum=False, formulas=formulas.copy())
 
     def get_deviations(self):
         mid = (self.position_min + self.position_max) / 2
