@@ -13,7 +13,7 @@ from .. import setting
 from . import PeakListUi
 from .manager import Manager, ui_task
 from .PeakFitFloatUiPy import Window as PeakFloatWin
-from .utils import get_tablewidget_selected_row, savefile
+from .utils import TableUtils, savefile
 
 colors = {
     PeakTags.Done: QtGui.QColor(0xD9FFC9),
@@ -22,6 +22,7 @@ colors = {
 
 
 class Widget(QtWidgets.QWidget):
+    jump_to_peak = QtCore.Signal(int)  # true peak index
 
     def __init__(self, manager: Manager) -> None:
         super().__init__()
@@ -44,6 +45,10 @@ class Widget(QtWidgets.QWidget):
         ui.gotoToolButton.clicked.connect(self.goto_mass)
         ui.tableWidget.itemDoubleClicked.connect(self.openPeakFloatWin)
         ui.tableWidget.verticalScrollBar().valueChanged.connect(self.scrolled)
+        ui.tableWidget.setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        ui.tableWidget.customContextMenuRequested.connect(
+            self.show_context_menu)
 
         self.manager.bind.peak_fit_left_index.connect(
             "peaklist", self.scroll_to_index)
@@ -123,7 +128,7 @@ class Widget(QtWidgets.QWidget):
         """
             filter selected or filter unselected
         """
-        selectedindex = get_tablewidget_selected_row(self.ui.tableWidget)
+        selectedindex = TableUtils.getSelectedRow(self.ui.tableWidget)
         info = self.info
         indexes = info.shown_indexes
         if select:
@@ -133,7 +138,7 @@ class Widget(QtWidgets.QWidget):
                 indexes.pop(index)
 
     def getSelected(self):
-        selectedindex = get_tablewidget_selected_row(self.ui.tableWidget)
+        selectedindex = TableUtils.getSelectedRow(self.ui.tableWidget)
         info = self.info
         indexes = info.shown_indexes
         return [indexes[index] for index in selectedindex]
@@ -166,6 +171,30 @@ class Widget(QtWidgets.QWidget):
             self.manager, self.info.shown_indexes[row])
         win.show()
         win.raise_()
+
+    def show_context_menu(self, pos: QtCore.QPoint):
+        table = self.ui.tableWidget
+        item = table.itemAt(pos)
+        if item is None:
+            return
+        table.setCurrentCell(item.row(), item.column())
+        menu = self.build_context_menu()
+        menu.exec(table.viewport().mapToGlobal(pos))
+
+    def build_context_menu(self) -> QtWidgets.QMenu:
+        menu = QtWidgets.QMenu(self.ui.tableWidget)
+        jump = menu.addAction("Jump to peak")
+        jump.setEnabled(self.info.spectrum is not None)
+        jump.triggered.connect(self.jump_to_selected_peak)
+        return menu
+
+    def jump_to_selected_peak(self):
+        if self.info.spectrum is None:
+            return
+        selected = self.getSelected()
+        if not selected:
+            return
+        self.jump_to_peak.emit(selected[0])
 
     @ui_task
     async def exportSpectrum(self):

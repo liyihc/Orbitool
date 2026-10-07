@@ -82,6 +82,7 @@ class Window(QtWidgets.QMainWindow):
         self.peakListDw = self.add_dock_widget(
             "Peak List", self.peakList, self.spectraListDw)
         self.peakFitTab.filter_selected.connect(self.peakList.filterSelected)
+        self.peakList.jump_to_peak.connect(self.show_peak_in_plot)
 
         self.masslist = MassListUiPy.Widget(manager)
         self.massListDw = self.add_dock_widget(
@@ -139,6 +140,10 @@ class Window(QtWidgets.QMainWindow):
     def add_tab(self, widget, title):
         self.ui.tabWidget.addTab(widget, title)
         return widget
+
+    def show_peak_in_plot(self, true_index: int):
+        self.ui.tabWidget.setCurrentWidget(self.peakFitTab)
+        self.peakFitTab.center_peak(true_index)
 
     def open_formula(self):
         self.formula.show()

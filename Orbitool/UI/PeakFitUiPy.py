@@ -245,7 +245,7 @@ class Widget(QtWidgets.QWidget):
         self.rescale()
         self.plot.canvas.draw()
 
-    def rescale(self):
+    def rescale(self, mz_range: Tuple[float, float] = None):
         info = self.info
         mz = info.shown_mz
         intensity = info.shown_intensity
@@ -254,8 +254,10 @@ class Widget(QtWidgets.QWidget):
 
         plot = self.plot
         x_min, x_max = plot.ax.get_xlim()
+        if mz_range is None:
+            mz_range = (x_min, x_max)
         id_min, id_max = binary_search.indexBetween_np(
-            mz, (x_min, x_max))
+            mz, mz_range)
         if id_min >= id_max:
             return
         y_max = intensity[id_min:id_max].max()
@@ -296,6 +298,16 @@ class Widget(QtWidgets.QWidget):
         new_x_max = new_x_min + (x_max - x_min)
         ax.set_xlim(new_x_min, new_x_max)
 
+        self.plot_moved()
+
+    def center_peak(self, true_index: int):
+        info = self.info
+        peaks = info.peaks
+        if info.spectrum is None or not 0 <= true_index < len(peaks):
+            return
+        peak = peaks[true_index]
+        self.plot.ax.set_xlim(peak.peak_position - 5, peak.peak_position + 5)
+        self.rescale((peak.mz.min(), peak.mz.max()))
         self.plot_moved()
 
     @ui_task(mode="light")

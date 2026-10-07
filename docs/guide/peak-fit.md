@@ -36,6 +36,8 @@ A peak can carry a tag. Available tags:
 ## Peak List interactions
 
 - **Double-click** a peak to refit it; type a mass to jump to the nearest peak.
+- **Right-click** a peak and choose **Jump to peak** to center the plot on it
+  (±5 m/z) and switch to this tab.
 - **Export** the spectrum, peaks, or isotope data from the
   [Peak List docker](dockers.md).
 
