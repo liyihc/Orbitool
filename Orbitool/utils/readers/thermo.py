@@ -131,13 +131,18 @@ class File:
         rawScanNum = self.getRawScanNum(scanNum)
         retentionTime = timedelta(
             minutes=self.rawfile.RetentionTimeFromScanNumber(rawScanNum))
-        if rawScanNum == self.lastRawScanNum:
+        # A faulty acquisition can give the last scan a retention time earlier than the
+        # one before it; correcting it needs that predecessor to compare against. A
+        # single-scan file is its own last scan, so the guard skips the correction and
+        # keeps its time -- without it, scanNum == 0 recursed into scanNum - 1 and asked
+        # the .NET reader for scan 0, which threw IndexOutOfRangeException.
+        if scanNum > 0 and rawScanNum == self.lastRawScanNum:
             lastRetentionTime = self.getSpectrumRetentionTime(scanNum - 1)
             if retentionTime < lastRetentionTime:
                 averageTimeDelta = (self.endTimedelta - self.startTimedelta) / \
                     (self.lastRawScanNum - self.firstRawScanNum)
                 retentionTime = lastRetentionTime + averageTimeDelta
-        return timedelta(minutes=self.rawfile.RetentionTimeFromScanNumber(rawScanNum))
+        return retentionTime
 
     def getSpectrumRetentionTimes(self):
         return [self.getSpectrumRetentionTime(scan_num) for scan_num in range(self.totalScanNum)]

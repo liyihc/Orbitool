@@ -1,18 +1,11 @@
 # Todo
 
 来源：`AverageScans` 崩溃调查。根因是混合扫描列表里存在 FT profile 为空的扫描，交给
-`AverageScans` 即崩溃。以下按 已完成 / 待办 / 待评估 / 数据侧 归档。
+`AverageScans` 即崩溃。
 
-## 已完成（供对照，不需再动）
+> 完成一项就直接删掉，不留归档——本文件只记录未完成的事项。
 
-- [x] **崩溃修复**：不把 FT profile 为空的扫描交给 `AverageScans`；失败时归因、剔除、重试一次，
-      窗口保住（85/87）。`Orbitool/utils/readers/thermo.py`
-- [x] **对用户可见的报告**：损坏的 `.RAW` 在读完后弹窗（文件名 + 条数 + 原因 + 扫描号），
-      取走即清空，不重复弹。`Orbitool/UI/NoiseUiPy.py` + `thermo.takeDamagedScans()`
-- [x] **句柄释放**：`File.close()`（幂等、永不抛出）；`models/file/file.py` 在 reader 被替换或
-      "无谱可返回"时显式调用。顺带修掉 `initRawFile` 失败时终结期 `AttributeError`。
-- [x] 验证：`verify_fix.py` / `verify_close.py` / `verify_damage_report.py` 全部 VERIFIED；
-      `uv run --group dev pytest` → 244 passed。
+以下按 待办 / 待评估 / 数据侧 归类。
 
 ## 待办
 
@@ -34,33 +27,25 @@
 - 关联小问题：file tab 的 ppm 框**只写不读**（其它 tab 都有 `*1e6` 回显），
   已有工作区里框内显示值可能与 `info.rtol` 不一致。
 
-### 2. `getSpectrumRetentionTime` 的最后一条扫描修正从未生效
-- [ ] `thermo.py` 的 `getSpectrumRetentionTime`：算好 `retentionTime` 后，
-      返回行重新算了一遍 `RetentionTimeFromScanNumber(rawScanNum)`，把修正丢了 → 改成 `return retentionTime`。
-- 影响：文件尾部保留时间**非单调**，而 `timeRange2ScanNumRange` → `indexBetween` 假定有序，
-      于是尾部窗口可能被夹成空窗口**静默丢掉**（`cnt == 0` 直接 return）。
-      同一处的注释（"Due to a bug related to scan time during data acquisition…"）说明作者见过这个采集怪癖。
-- ⚠️ 修它会让文件尾部窗口的边界变化（行为改变），需一并说明。
-
-### 3. 非 Thermo 路径 `reader` 未绑定
+### 2. 非 Thermo 路径 `reader` 未绑定
 - [ ] `models/file/file.py` 的 `get_spectrum_from_info`：`if origin == PATH_TYPE.THERMO.value:`
       之外没有任何分支，`reader` 永远未赋值 → 调用处 `UnboundLocalError`
       （`PATH_TYPE` 只有 `THERMO` / `HDF5`）。
 - 建议：对不支持的 origin 抛一个明确的错误，而不是靠未绑定变量炸。
 
-### 4. 空窗口返回时丢弃 `last_reader`
+### 3. 空窗口返回时丢弃 `last_reader`
 - [ ] `get_spectrum_from_info` 在 `ret is None` 时返回 `None, None`，调用方于是把 reader 丢掉，
       下一个同文件的窗口**重新打开** .RAW（每个 reader 约 11 MB 工作集，实测）。
 - 现状：已经把 reader 显式 `close()`（不再等 GC），但"反复重开"仍在。
 - 建议（**需拍板**）：返回 `None, LastReader(path=self.path, reader=reader)` 让调用方继续复用，
       代价是这个 reader 会一直开着（11 MB）直到路径变化。哪种更划算取决于实际文件大小与数量。
 
-### 5. 日志轮转不删旧文件
+### 4. 日志轮转不删旧文件
 - [ ] `Orbitool/logger.py:13` 的 `TimedRotatingFileHandler(LOG_PATH, when="midnight")`
       **没设 `backupCount`**（默认 0 = 保留全部）→ 轮转出来的 `log.txt.<date>` 永不删除。
 - 建议：给一个上限（例如 `backupCount=7`）。
 
-### 6. 每窗口一行 DEBUG 日志要不要长期留（**需拍板**）
+### 5. 每窗口一行 DEBUG 日志要不要长期留（**需拍板**）
 - [ ] `thermo.py` 每次 `AverageScans` 成功后一行 `AverageScans ok …`（诊断期加的）。
 - 量级：默认「每 2h5m」约 5 行/夜；「每 N 张谱」与窗口数同阶（2 万次扫描 / N=10 → 约 2 千行、约 200 KB / 次 denoise）。
 - 选项：① 长期保留；② 只在异常时打（如 `distinct > 1` 或 `ScansCombined != requested`）；
