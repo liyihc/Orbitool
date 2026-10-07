@@ -66,7 +66,7 @@ def run_package(config: Config):
     count = 0
     with zipfile.ZipFile(ZIP_PATH, 'w') as file:
         for path in EXE_DIR.glob("**/*"):
-            file.write(path, path.relative_to(DIST_DIR), zipfile.ZIP_DEFLATED)
+            file.write(path, path.relative_to(EXE_DIR), zipfile.ZIP_DEFLATED)
             count += 1
     print(f"packaged {count} files into {ZIP_PATH}")
 

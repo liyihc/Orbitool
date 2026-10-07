@@ -98,7 +98,7 @@ workflow tabs; the side panels (Spectra List, Peak List, Mass List) are
     see [build-environment.md](build-environment.md)), then run again.
   - Pipeline: pyuic → Cython compile (deletes and rebuilds all `*.pyd`) → pytest →
     pyinstaller + UPX → zip.
-  - The zip holds `Orbitool/Orbitool.exe` plus its `_internal/` dependency bundle
+  - The zip root holds `Orbitool.exe` plus its `_internal/` dependency bundle
     (PyInstaller 6 layout), with no launcher `.bat`. Settings and logs live next to
     the exe, outside `_internal`: settings save to `setting.json` via
     `Orbitool/config.py`, paths resolved in `paths.py`.
