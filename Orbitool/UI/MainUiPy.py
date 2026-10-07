@@ -6,7 +6,7 @@ from typing import Dict, Union
 from matplotlib.pyplot import get
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from Orbitool import setting
+from Orbitool import logger, setting
 from Orbitool.base.structure import broken_entries as h5_brokens
 from Orbitool.models.workspace import WorkSpace, updater
 from ..version import VERSION
@@ -179,6 +179,7 @@ class Window(QtWidgets.QMainWindow):
         self._load_workspace(f)
 
     def _load_workspace(self, f: str):
+        logger.i("MainUiPy", f'_load_workspace() path="{f}"')
         version = updater.get_version(f)
         if updater.need_update(version):
             ret, n = UiUtils.savefile("Update workspace and save as a new file", "Orbitool Workspace file(*.Orbitool)")
@@ -190,6 +191,7 @@ class Window(QtWidgets.QMainWindow):
                 n.with_suffix(".orbt-tmp").unlink()
             n.chmod(0o666)
             updater.update(n)
+            logger.i("MainUiPy", f'_load_workspace() migrate src="{f}" dst="{n}"')
             f = n
         workspace = WorkSpace(f)
         if h5_brokens:
@@ -198,6 +200,8 @@ class Window(QtWidgets.QMainWindow):
             h5_brokens.clear()
         self.manager.workspace = workspace
         self.manager.init_or_restored.emit()
+        logger.i(
+            "MainUiPy", f'_load_workspace() opened path="{f}" version="{workspace.info.version}"')
 
     @ui_task
     async def save(self):
