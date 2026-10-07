@@ -18,7 +18,7 @@ generation, and packaging. Read it before running any of them.
 - `Orbitool/` — main package: `base/` (HDF5 serialization framework), `models/`
   (domain logic: formula, spectrum, peakfit, calibration, workspace), `UI/` (PySide6
   interface), `utils/` (runtime utilities, Thermo RAW readers)
-- `utils/` — build/dev tooling (pyuic, Cython setup); unrelated to `Orbitool/utils/`
+- `tools/` — build/dev tooling (pyuic, Cython setup); unrelated to `Orbitool/utils/`
 - `notebooks/` — experiments · `resources/` — icons
 - `docs/` — documentation: `guide/` (user manual, entry point
   `docs/guide/index.md`), `dev/` (development + build), `agents/` (agent skill docs)
@@ -35,9 +35,8 @@ generation, and packaging. Read it before running any of them.
   `Select-Object -Last N` — that hides failure tracebacks
 - Code and docs land together: whenever you change code, update every doc that the
   change makes stale. A behavior work-flow change touches `docs/guide/`; a
-  command/build change touches `docs/dev/`; user-visible changes get a
-  `CHANGELOG.md` entry. Also update `readme.md` or `GLOSSARY.md`/`docs/adr/` when
-  they describe what changed — in the same change. But `docs/dev/` states
+  command/build change touches `docs/dev/`. Also update `readme.md` or
+  `GLOSSARY.md`/`docs/adr/` when they describe what changed — in the same change. But `docs/dev/` states
   contracts and entry points, not implementation mechanics: don't restate what the
   code already carries (path resolution, migration fallbacks, volatile
   tables/defaults). To keep it findable, point to the authoritative `file`/`symbol`

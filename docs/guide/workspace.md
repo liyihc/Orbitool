@@ -10,7 +10,6 @@ extension. The **Workspace** menu has:
 
 Workspaces are versioned. Loading a workspace written by an older Orbitool may
 run a one-time migration; a workspace newer than your build will refuse to open.
-See the [CHANGELOG](../../CHANGELOG.md) when upgrading.
 
 ### Saving large files
 

@@ -23,31 +23,31 @@ if __name__ == "__main__":
     root = os.path.relpath(root)
 
     if args.subparser_name == "pyuic":
-        from utils.pyuic import pyuic, clear
+        from tools.pyuic import pyuic, clear
         if args.clear:
             clear(os.path.join(root, "Orbitool", "UI"))
         else:
             pyuic(os.path.join(root, "Orbitool", "UI"))
     elif args.subparser_name == "count":
-        from utils.countCode import count
+        from tools.countCode import count
         if args.root == "default":
             count([os.path.join(root, "Orbitool")], root, args.count_blank)
         else:
             count([args.root], [], args.count_blank)
     elif args.subparser_name == "collect":
-        from utils.collect_code import collect
+        from tools.collect_code import collect
         collect(root, [os.path.join(root, "Orbitool"),
-                os.path.join(root, "utils")], root)
+                os.path.join(root, "tools")], root)
     elif args.subparser_name == "setup":
-        from utils.setup import main as setup, clear
+        from tools.setup import main as setup, clear
         orbitool_root = [os.path.join(root, "Orbitool")]
         if args.clear:
             clear(orbitool_root)
         else:
             setup(orbitool_root)
     elif args.subparser_name == "copy":
-        from utils.copyCode import copyTo
+        from tools.copyCode import copyTo
         copyTo(root)
     elif args.subparser_name == "clear":
-        from utils.clear_temp import clear
+        from tools.clear_temp import clear
         clear()

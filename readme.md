@@ -48,7 +48,6 @@ problems are in the [FAQ](docs/guide/faq.md).
 - [User guide](docs/guide/index.md) — the interface and each processing step.
 - [Development](docs/dev/development.md) — build, run and test.
   [Build environment](docs/dev/build-environment.md) — toolchain setup.
-- [Changelog](CHANGELOG.md).
 
 ## Maintain
 

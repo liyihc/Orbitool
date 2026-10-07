@@ -17,7 +17,7 @@ def copyTo(root):
     os.mkdir(codeexport)
 
     notRecurrent = root
-    recurrent = ['Orbitool', 'utils']
+    recurrent = ['Orbitool', 'tools']
     recurrent = [os.path.join(root, r) for r in recurrent]
 
     exts = [".py", ".pyx", ".pxd", ".pyd", ".dll", ".md", ".yaml", ".spec"]

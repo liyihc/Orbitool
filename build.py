@@ -7,8 +7,8 @@ import zipfile
 import pytest
 
 from Orbitool.version import VERSION
-from utils import pyuic, setup
-from utils.build_config import Config, read_config
+from tools import pyuic, setup
+from tools.build_config import Config, read_config
 
 try:
     import jedi

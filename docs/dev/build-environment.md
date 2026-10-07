@@ -31,7 +31,7 @@ do not use `where gcc` to check for a toolchain.
 
 The build scripts then prepend `<mingw_dir>\bin` to `PATH` and build portable
 `.pyd` files; the compile/link flags and the reasons behind them live in
-`utils/setup.py` (`cythonSetup`).
+`tools/setup.py` (`cythonSetup`).
 
 ### MSVC (alternative)
 
@@ -59,7 +59,7 @@ containing `upx.exe`.
 
 Created by the first `build.py` run (edit it, then rerun) or by
 `util.py setup`'s MinGW prompt. Gitignored — local paths never enter the
-repository. `utils/build_config.py` (`Config`) defines the fields and their
+repository. `tools/build_config.py` (`Config`) defines the fields and their
 defaults.
 
 Minimal example:
@@ -78,7 +78,7 @@ uv run --group build python util.py setup          # compile extensions in place
 uv run --group build python util.py setup --clear  # delete *.pyd first
 ```
 
-Compiles every `.pyx` under `Orbitool/`; `compileAll` in `utils/setup.py` orders
+Compiles every `.pyx` under `Orbitool/`; `compileAll` in `tools/setup.py` orders
 them by dependency. Required on a fresh clone: the `*.pyd` files are gitignored,
 and without them imports and tests fail.
 

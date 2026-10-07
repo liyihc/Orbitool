@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict
 
 from Orbitool.utils.files import FolderTraveler
-from utils.build_config import load_config, save_config
+from tools.build_config import load_config, save_config
 
 MSVC_GUIDANCE = """\
 ==================================================================
