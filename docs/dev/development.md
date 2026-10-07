@@ -70,6 +70,10 @@ To run the real-GUI suite:
   to `<repo parent>/data`.
 - `uv run --group dev pytest Orbitool/UI/tests`
 - set `QT_QPA_PLATFORM=offscreen` to run without a visible window.
+- To drive the real `Window` offscreen from an ad-hoc script, build it the way
+  `Orbitool/UI/tests/migration_harness.py` does — it pins a `QApplication`
+  (constructing `Window()` without one aborts the process) and disables
+  multiprocessing/threading for determinism.
 
 ## UI code generation
 
@@ -78,6 +82,13 @@ To run the real-GUI suite:
   logic lives in the hand-written `*UiPy.py` siblings.
 - A few generated files end in uppercase `.Py`; those imports only resolve on
   case-insensitive filesystems (Windows).
+
+## UI structure
+
+The main window is `MainUiPy.Window` (hand-written) over the generated
+`MainUi.Ui_MainWindow` from `Main.ui`. The `QTabWidget` holds the left-to-right
+workflow tabs; the side panels (Mass List, Spectra List, Spectrum, Peak List,
+Timeseries) are `QDockWidget`s, not tabs.
 
 ## Packaging a release
 
