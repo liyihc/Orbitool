@@ -12,13 +12,11 @@ from .base import BaseInfo
 from .calibration import CalibratorInfo
 from .file_tab import FileTabInfo
 from .formula import FormulaInfo
-from .massdefect import MassDefectInfo
 from .masslist import MassListInfo
 from .noise_tab import NoiseTabInfo
 from .peak_fit import PeakFitInfo
 from .peak_shape import PeakShapeInfo
 from .spectra_list import SpectraListInfo
-from .spectrum import SpectrumInfo
 from .timeseries import TimeseriesInfo
 
 T = TypeVar("T")
@@ -31,14 +29,12 @@ class WorkspaceInfo(BaseStructure):
     peak_shape_tab: PeakShapeInfo = PeakShapeInfo()
     calibration_tab: CalibratorInfo = CalibratorInfo()
     peak_fit_tab: PeakFitInfo = PeakFitInfo()
-    mass_defect_tab: MassDefectInfo = MassDefectInfo()
     time_series_tab: TimeseriesInfo = TimeseriesInfo()
 
     spectra_list: SpectraListInfo = SpectraListInfo()
     formula_docker: FormulaInfo = FormulaInfo()
     masslist_docker: MassListInfo = MassListInfo()
     # peaklist_docker: BaseStructure = field(BaseStructure)
-    spectrum_docker: SpectrumInfo = SpectrumInfo()
 
 
 class WorkspaceData(BaseDiskData):

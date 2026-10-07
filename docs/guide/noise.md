@@ -59,5 +59,7 @@ the same file again and reports it again. `log.txt` is the permanent record.
 
 ## Export
 
+- **Spectrum** (`Ctrl + Alt + S`) — the raw selected/averaged spectrum shown on
+  the tab.
 - **Denoised spectrum** (`Ctrl + Alt + D`)
 - **Noise peaks** (`Ctrl + Alt + N`)

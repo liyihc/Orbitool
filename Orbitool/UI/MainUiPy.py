@@ -12,8 +12,7 @@ from Orbitool.models.workspace import WorkSpace, updater
 from ..version import VERSION
 from . import (CalibrationUiPy, file_tab, formulas, MainUi, MassDefectUiPy,
                MassListUiPy, NoiseUiPy, PeakFitUiPy, PeakListUiPy,
-               PeakShapeUiPy, SpectraListUiPy, SpectrumUiPy, TimeseriesesUiPy,
-               TimeseriesUiPy)
+               PeakShapeUiPy, SpectraListUiPy, TimeseriesesUiPy)
 from . import utils as UiUtils
 from .manager import Manager, MultiProcess, ui_task
 
@@ -49,8 +48,6 @@ class Window(QtWidgets.QMainWindow):
 
         self.noiseTab: NoiseUiPy.Widget = self.add_tab(
             NoiseUiPy.Widget(manager), "Noise")
-        self.noiseTab.selected_spectrum_average.connect(
-            self.show_spectrum)
         self.noiseTab.callback.connect(self.noise_tab_finish)
 
         self.peakShapeTab: PeakShapeUiPy.Widget = self.add_tab(
@@ -63,48 +60,37 @@ class Window(QtWidgets.QMainWindow):
             self.calibration_finish)
 
         self.peakFitTab = self.add_tab(PeakFitUiPy.Widget(manager), "Peak Fit")
-        self.peakFitTab.show_spectrum.connect(self.show_spectrum)
-
-        self.massDefectTab = self.add_tab(
-            MassDefectUiPy.Widget(manager), "Mass Defect")
+        self.peakFitTab.show_mass_defect.connect(self.open_mass_defect)
 
         self.timeseriesesTab = self.add_tab(
             TimeseriesesUiPy.Widget(manager), "Timeseries")
 
-        # formula window
+        # window widgets
 
         self.formula = formulas.FormulaWidget(manager)
         self.formula.setWindowTitle("Formula")
 
-        # docker widgets
-
-        self.masslist = MassListUiPy.Widget(manager)
-        self.massListDw = self.add_dock_widget(
-            "Mass List", self.masslist)
-
-        self.peakFitTab.show_masslist.connect(self.masslist.showMassList_CatchException)
+        # docker widgets — three fixed dockers, stacked as tabs in the left
+        # area. The tab order is Spectra List, Peak List, Mass List (each
+        # tabified after the previous), and navigation never changes it.
 
         self.spectraList = SpectraListUiPy.Widget(manager)
         self.spectraListDw = self.add_dock_widget(
-            "Spectra List", self.spectraList, self.massListDw)
-
-        self.spectrum = SpectrumUiPy.Widget(manager)
-        self.spectrumDw = self.add_dock_widget(
-            "Spectrum", self.spectrum, self.spectraListDw)
+            "Spectra List", self.spectraList)
 
         self.peakList = PeakListUiPy.Widget(manager)
         self.peakListDw = self.add_dock_widget(
-            "Peak List", self.peakList, self.spectrumDw)
+            "Peak List", self.peakList, self.spectraListDw)
         self.peakFitTab.filter_selected.connect(self.peakList.filterSelected)
 
-        self.timeseries = TimeseriesUiPy.Widget(manager)
-        self.timeseriesDw = self.add_dock_widget(
-            "Timeseries", self.timeseries, self.peakListDw)
-        self.timeseriesesTab.click_series.connect(self.timeseries.showSeries_CatchException)
+        self.masslist = MassListUiPy.Widget(manager)
+        self.massListDw = self.add_dock_widget(
+            "Mass List", self.masslist, self.peakListDw)
+        self.peakFitTab.show_masslist.connect(self.masslist.showMassList_CatchException)
+
+        self.spectraListDw.raise_()
 
         ui.tabWidget.setCurrentIndex(0)
-        ui.tabWidget.currentChanged.connect(self.tab_changed)
-        self.tab_changed(0)
 
     def __init__(self, workspacefile=None) -> None:
         super().__init__()
@@ -159,8 +145,19 @@ class Window(QtWidgets.QMainWindow):
         self.formula.raise_()
         self.formula.activateWindow()
 
+    def open_mass_defect(self, peaks, title):
+        win = MassDefectUiPy.Widget(self.manager)
+        win.setWindowTitle(title)
+        win.set_peaks(peaks)
+        self.manager.mass_defect_wins.append(win)
+        win.show()
+        win.raise_()
+        win.activateWindow()
+
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         self.formula.close()
+        for win in list(self.manager.mass_defect_wins):
+            win.close()
         if self.manager.formulas_result_win is not None:
             self.manager.formulas_result_win.close()
         self.manager.save.emit()
@@ -259,15 +256,7 @@ class Window(QtWidgets.QMainWindow):
     async def file_tab_finish(self):
         self.spectraList.ui.comboBox.setCurrentIndex(-1)
         self.spectraList.ui.comboBox.setCurrentIndex(0)
-        self.spectraListDw.show()
-        self.spectraListDw.raise_()
         self.ui.tabWidget.setCurrentWidget(self.noiseTab)
-
-    @ui_task(mode="join")
-    async def show_spectrum(self, spectrum):
-        self.spectrum.show_spectrum(spectrum)
-        self.spectrumDw.show()
-        self.spectrumDw.raise_()
 
     @ui_task(mode="join")
     async def noise_tab_finish(self, result):
@@ -283,45 +272,8 @@ class Window(QtWidgets.QMainWindow):
     async def calibration_finish(self):
         self.ui.tabWidget.setCurrentWidget(self.peakFitTab)
         self.spectraList.ui.comboBox.setCurrentIndex(1)
-        self.spectraListDw.raise_()
 
     def abort_process(self):
         thread: MultiProcess = self.manager.running_thread
         if isinstance(thread, MultiProcess):
             thread.abort()
-
-    def tab_changed(self, index):
-        widget = self.ui.tabWidget.currentWidget()
-
-        def hide(dockerwidget):
-            dockerwidget.hide()
-
-        def show(dockerwodget):
-            if dockerwodget.isHidden():
-                dockerwodget.show()
-        if widget == self.fileTab:
-            list(map(hide, [self.massListDw, self.spectraListDw,
-                 self.spectrumDw, self.peakListDw, self.timeseriesDw]))
-        elif widget == self.noiseTab:
-            list(
-                map(hide, [self.massListDw, self.peakListDw, self.timeseriesDw]))
-            list(map(show, [self.spectraListDw, self.spectrumDw]))
-        elif widget == self.peakShapeTab:
-            list(map(hide, [self.massListDw, self.spectraListDw,
-                 self.spectrumDw, self.peakListDw, self.timeseriesDw]))
-        elif widget == self.calibrationTab:
-            list(
-                map(hide, [self.massListDw, self.peakListDw, self.timeseriesDw]))
-            list(map(show, [self.spectraListDw, self.spectrumDw]))
-        elif widget == self.peakFitTab:
-            list(map(hide, [self.timeseriesDw]))
-            list(map(show, [self.massListDw, self.spectraListDw,
-                            self.spectrumDw, self.peakListDw]))
-        elif widget == self.massDefectTab:
-            list(map(hide, [self.timeseriesDw]))
-            list(map(show, [self.massListDw, self.spectraListDw,
-                            self.spectrumDw, self.peakListDw]))
-        elif widget == self.timeseriesesTab:
-            list(map(hide, []))
-            list(map(show, [self.massListDw, self.spectraListDw,
-                            self.spectrumDw, self.peakListDw, self.timeseriesDw]))

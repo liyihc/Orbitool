@@ -1,11 +1,11 @@
 """Executable coverage for the ticket-08 migration (Noise, PeakShape,
-Spectrum, Timeseries, Timeserieses): the legacy generator tasks were
-rewritten as ui_task coroutines.
+Timeserieses): the legacy generator tasks were rewritten as ui_task
+coroutines.
 
-The batch carries two non-default mode sites (`showSeries_CatchException`
-`'e'` -> light, `rescale` `'x'` -> join), four `MultiProcess` worker steps
-(Noise `ReadFromFile` in denoise/skip, Timeserieses `CalcTimeseries` /
-`CalcSumTimeSeries`), and several former argument-switch slots whose
+The batch carries one non-default mode site (`rescale` `'x'` -> join), four
+`MultiProcess` worker steps (Noise `ReadFromFile` in denoise/skip,
+Timeserieses `CalcTimeseries` / `CalcSumTimeSeries`), and several former
+argument-switch slots whose
 arguments are now forwarded by signature. It is also the batch where two
 generator helpers (`Noise.readSelectedSpectrum`, `PeakShape.showPeak`,
 `Timeserieses.showTimeseries`) became async: `showTimeseries` keeps a
@@ -27,17 +27,15 @@ import importlib
 from array import array
 from datetime import datetime, timedelta
 
-import numpy as np
 import pytest
 from PySide6 import QtWidgets
 
-from ..models.spectrum.spectrum import Spectrum
+from Orbitool import setting
 from ..models.timeseries import TimeSeries
 from ..models.workspace.timeseries import TimeSeriesInfoRow
 # debug_settings is an autouse fixture re-exported for pytest
 from .tests.migration_harness import MigrationEnv, debug_settings  # noqa: F401
 
-spectrum_module = importlib.import_module("Orbitool.UI.SpectrumUiPy")
 timeserieses_module = importlib.import_module("Orbitool.UI.TimeseriesesUiPy")
 noise_module = importlib.import_module("Orbitool.UI.NoiseUiPy")
 peakshape_module = importlib.import_module("Orbitool.UI.PeakShapeUiPy")
@@ -56,8 +54,6 @@ def _series(position: float) -> TimeSeries:
 def env(request):
     state = MigrationEnv()
     state.build(request, extra_dialog_modules=(noise_module, peakshape_module))
-    state.window.timeseriesesTab.click_series.connect(
-        lambda: state.click_series.append(1))
     return state
 
 
@@ -66,7 +62,6 @@ def _reset_timeseries(window):
     info = window.manager.workspace.info.time_series_tab
     data.time_series.clear()
     info.timeseries_infos.clear()
-    info.show_index = -1
     widget = window.timeseriesesTab
     widget.shown_series.clear()
     widget.plot.ax.clear()
@@ -176,46 +171,6 @@ def test_peakshape_finish_emits_callback(env):
 
 
 # --------------------------------------------------------------------------
-# Spectrum: msgless background step -> default message
-# --------------------------------------------------------------------------
-
-def test_spectrum_export_worker_and_default_message(env, tmp_path, monkeypatch):
-    window = env.window
-    spectrum = Spectrum(
-        mz=np.array([1.0, 2.0]), intensity=np.array([3.0, 4.0]),
-        path="none:", start_time=datetime(2024, 1, 1),
-        end_time=datetime(2024, 1, 1, 1))
-    window.spectrum.info.spectrum = spectrum
-    dst = tmp_path / "spectrum.csv"
-    monkeypatch.setattr(spectrum_module, "savefile", lambda *a, **k: (True, str(dst)))
-
-    window.spectrum.export()
-
-    assert env.dialogs == []
-    assert env.busy == [True, False]
-    assert "processing" in env.msgs             # msgless background -> default msg
-    assert dst.exists() and dst.stat().st_size > 0
-
-
-# --------------------------------------------------------------------------
-# Timeseries: one former single-letter light site
-# --------------------------------------------------------------------------
-
-def test_timeseries_light_show_series_leaves_busy_untouched(env):
-    window = env.window
-    manager = window.manager
-    manager.set_busy(True)
-    env.busy.clear()
-    try:
-        window.timeseries.showSeries_CatchException()   # was a light letter mode
-        assert env.dialogs == []
-        assert env.busy == []                            # light: no transition
-        assert manager.busy is True
-    finally:
-        manager.set_busy(False)
-
-
-# --------------------------------------------------------------------------
 # Timeserieses: MultiProcess pipeline, join, async helper + sync restore
 # --------------------------------------------------------------------------
 
@@ -291,21 +246,34 @@ def test_timeserieses_signature_forwarded_slots(env):
     assert env.dialogs == []
     assert env.busy == [True, False]
     assert 0 in widget.shown_series             # a line was plotted
-    env.reset()
 
-    item = table.item(0, 1)
-    assert item is not None
-    table.itemDoubleClicked.emit(item)          # -> seriesClicked(item)
-    assert widget.info.show_index == 0
-    assert env.click_series == [1]
+
+def test_timeserieses_export_selected(env, tmp_path, monkeypatch):
+    window = env.window
+    widget = window.timeseriesesTab
+    _install_valid_series(window)
+    widget._show_timeseries_table()
+    widget.ui.tableWidget.selectRow(0)
+    dst = tmp_path / "timeseries_selected.csv"
+    monkeypatch.setattr(
+        timeserieses_module, "savefile", lambda *a, **k: (True, str(dst)))
+    monkeypatch.setattr(setting.timeseries, "export_time_formats", {"iso"})
+
+    widget.exportSelected()
+
+    assert env.dialogs == []
     assert env.busy == [True, False]
+    assert dst.exists()
+    rows = dst.read_text().splitlines()
+    assert rows[0] == "iso time,intensity,position,deviation"
+    assert rows[1] == "2024-01-01T12:00:00,1.0,100.0,0.0"
+    assert rows[2] == "2024-01-01T12:01:00,2.0,100.0,0.0"
 
 
 def test_timeserieses_export_worker(env, tmp_path, monkeypatch):
     window = env.window
     widget = window.timeseriesesTab
     _install_valid_series(window)
-    widget.info.show_index = 0
     dst = tmp_path / "timeseries.csv"
     monkeypatch.setattr(
         timeserieses_module, "savefile", lambda *a, **k: (True, str(dst)))

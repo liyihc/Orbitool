@@ -85,9 +85,6 @@ def _assert_workspace(workspace: WorkSpace, era: str):
         assert list(calc_gen.element_states) == list(legacy.ELEMENT_STATES)
         assert list(calc_gen.isotope_usable) == list(legacy.ISOTOPE_USABLE)
 
-    # pre-2.4.0 workspaces arrive under the current name
-    assert info.mass_defect_tab.is_dbe is True
-
     result = info.noise_tab.general_result
     np.testing.assert_array_equal(result.spectrum_split.mz, legacy.MZ)
     np.testing.assert_array_equal(result.noise_split.mz, legacy.MZ)
@@ -106,14 +103,12 @@ def _assert_workspace(workspace: WorkSpace, era: str):
     np.testing.assert_array_equal(
         info.noise_tab.current_spectrum.mz, legacy.MZ)
 
-    spectrum = info.spectrum_docker.spectrum
-    assert spectrum is not None
-    if era == "2.4.0":
-        np.testing.assert_array_equal(spectrum.mz, legacy.MZ)
-    else:
-        # never opened in the old version: an empty value, not a broken entry
-        assert spectrum.path == ""
-        assert len(spectrum.mz) == 0
+    # state with no UI left: the 2.6.0 updater strips the stale spectrum
+    # docker, mass-defect tab and time-series show index from the file itself
+    assert "info/spectrum_docker" not in workspace.file
+    assert "info/mass_defect_tab" not in workspace.file
+    time_series_tab = workspace.file.get_h5group("info/time_series_tab")
+    assert "show_index" not in time_series_tab.attrs
 
     assert len(info.peak_fit_tab.peaks) == 1
     assert len(info.peak_fit_tab.raw_peaks) == 1
@@ -128,7 +123,7 @@ def test_migrate_legacy_workspace(tmp_path, era):
 
     updater.update(str(path))
 
-    assert updater.get_version(str(path)) == "2.5.3"
+    assert updater.get_version(str(path)) == "2.6.0"
     assert not updater.need_update(updater.get_version(str(path)))
 
     workspace = _open(path)
@@ -148,7 +143,7 @@ def test_migration_resumes_a_half_migrated_copy(tmp_path, state):
 
     updater.update(str(path))
 
-    assert updater.get_version(str(path)) == "2.5.3"
+    assert updater.get_version(str(path)) == "2.6.0"
     workspace = _open(path)
     try:
         assert broken_entries == []
@@ -223,7 +218,7 @@ def test_migration_carries_the_legacy_period_end_column(tmp_path):
 
     updater.update(str(path))
 
-    assert updater.get_version(str(path)) == "2.5.3"
+    assert updater.get_version(str(path)) == "2.6.0"
     workspace = _open(path)
     try:
         assert broken_entries == []
@@ -253,7 +248,7 @@ def test_migration_accepts_a_tab_that_never_held_series(tmp_path):
 
     updater.update(str(path))
 
-    assert updater.get_version(str(path)) == "2.5.3"
+    assert updater.get_version(str(path)) == "2.6.0"
     workspace = _open(path)
     try:
         assert broken_entries == []

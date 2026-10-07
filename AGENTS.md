@@ -45,6 +45,9 @@ generation, and packaging. Read it before running any of them.
   that explains a framework (`docs/dev/ui-tasks.md`). The user guide
   (`docs/guide/`) is exempt: it keeps its own account of the workflow and
   algorithms, for users who do not read the code
+- Every UI operation must be reachable through a visible control; purely implicit
+  gestures (double-click magic, hotkey-only, or otherwise hidden actions) are not
+  allowed
 - Writing tab background operations (`ui_task` / `background`, mode words, error and
   abort contracts): see `docs/dev/ui-tasks.md`
 

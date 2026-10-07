@@ -358,6 +358,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="exportSelectedPushButton">
+           <property name="text">
+            <string>selected</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="exportDeviationPushButton">
            <property name="text">
             <string>deviations</string>

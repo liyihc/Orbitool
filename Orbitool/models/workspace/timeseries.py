@@ -44,11 +44,8 @@ class TimeSeriesInfoRow(BaseRowStructure):
 
 class TimeseriesInfo(BaseInfo):
     timeseries_infos: List[TimeSeriesInfoRow] = []
-    show_index: int = -1
 
     def sync(self, time_series: Union[List[TimeSeries], IDiskListView[TimeSeries]]):
         if len(self.timeseries_infos) != len(time_series):
             self.timeseries_infos = [
                 TimeSeriesInfoRow.FromTimeSeries(s) for s in time_series]
-        if not -1 <= self.show_index < len(time_series):
-            self.show_index = -1

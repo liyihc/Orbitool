@@ -24,8 +24,22 @@ class Widget(QtWidgets.QWidget):
         self.setupUi()
         self.plot = Plot(self.ui.widget)
 
-        manager.init_or_restored.connect(self.restore)
-        manager.save.connect(self.updateState)
+        self.peaks: list[FittedPeak] = []
+        # each window is independent and never persisted to the workspace, so
+        # its plot state lives here rather than in the workspace info
+        self.clr_title = ""
+        self.clr = Clr()
+        self.gry = Gry()
+
+    def set_peaks(self, peaks):
+        """Adopt the caller's already-deep-copied snapshot and draw it.
+
+        The window reads only this snapshot, so it never sees later Peak Fit
+        filtering; each open hands in a fresh copy.
+        """
+        self.peaks = peaks
+        self.calculateMassDefect()
+        self.plotMassDefect()
 
     def setupUi(self):
         ui = self.ui
@@ -40,16 +54,11 @@ class Widget(QtWidgets.QWidget):
         ui.minSizeHorizontalSlider.valueChanged.connect(self.replot)
         ui.maxSizeHorizontalSlider.valueChanged.connect(self.replot)
 
-    def restore(self):
-        self.info.ui_state.restore_state(self.ui)
-        self.plotMassDefect()
-
-    def updateState(self):
-        self.info.ui_state.store_state(self.ui)
-
-    @property
-    def info(self):
-        return self.manager.workspace.info.mass_defect_tab
+    def closeEvent(self, a0) -> None:
+        wins = self.manager.mass_defect_wins
+        if self in wins:
+            wins.remove(self)
+        a0.accept()
 
     @ui_task
     async def calc(self):
@@ -62,7 +71,7 @@ class Widget(QtWidgets.QWidget):
         is_ele = ui.elementRadioButton.isChecked()
         is_atom = ui.atomsRadioButton.isChecked()
 
-        peaks = self.manager.workspace.info.peak_fit_tab.peaks
+        peaks = self.peaks
 
         clr_peaks = [peak for peak in peaks if len(peak.formulas) > 0]
         clr_formula = list(map(find_formula, clr_peaks))
@@ -96,28 +105,29 @@ class Widget(QtWidgets.QWidget):
         gry_y = gry_x - np.round(gry_x)
         gry_size = np.array([peak.peak_intensity for peak in gry_peaks])
 
-        info = self.info
-        info.is_dbe = is_dbe
+        self.clr_title = ""
         if is_dbe:
-            info.clr_title = "DBE"
+            self.clr_title = "DBE"
         elif is_ele:
-            info.clr_title = element
+            self.clr_title = element
         elif is_atom:
-            info.clr_title = "atoms"
+            self.clr_title = "atoms"
 
-        info.clr = Clr(x=clr_x, y=clr_y, size=clr_size,
+        self.clr = Clr(x=clr_x, y=clr_y, size=clr_size,
                        color=clr_color, labels=clr_labels or [])
-        info.gry = Gry(x=gry_x, y=gry_y, size=gry_size)
+        self.gry = Gry(x=gry_x, y=gry_y, size=gry_size)
 
     def plotMassDefect(self):
         plot = self.plot
         plot.clear()
 
-        info = self.info
-        if len(info.clr.x) == 0 and len(info.gry.x) == 0:
-            return
-
         ui = self.ui
+        clr = self.clr
+        gry = self.gry
+        show_gry = ui.showGreyCheckBox.isChecked() and len(gry.x) > 0
+
+        if len(clr.x) == 0 and not show_gry:
+            return
 
         if ui.minSizeHorizontalSlider.value() > ui.maxSizeHorizontalSlider.value():
             ui.minSizeHorizontalSlider.setValue(
@@ -129,13 +139,8 @@ class Widget(QtWidgets.QWidget):
         max_factor = math.exp(
             ui.maxSizeHorizontalSlider.value() / 10) * 10
 
-        is_dbe = info.is_dbe
-        show_gry = ui.showGreyCheckBox.isChecked()
         is_log = ui.logCheckBox.isChecked()
         alpha = 1 - ui.transparencyDoubleSpinBox.value()
-
-        clr = info.clr
-        gry = info.gry
 
         clr_size = clr.size
         gry_size = gry.size
@@ -144,12 +149,14 @@ class Widget(QtWidgets.QWidget):
             clr_size = np.log(clr_size + 1) - 1
             gry_size = np.log(gry_size + 1) - 1
 
-        if show_gry and len(gry.x) > 0:
-            maximum = np.max((clr_size.max(), gry_size.max()))
-            minimum = np.min((clr_size.min(), gry_size.min()))
-        else:
-            maximum = clr_size.max()
-            minimum = clr_size.min()
+        all_size = np.concatenate([clr_size, gry_size]) if show_gry else clr_size
+        maximum = all_size.max()
+        minimum = all_size.min()
+
+        if maximum == minimum:
+            # a single point (or identical sizes) would divide by zero and
+            # produce NaN scatter sizes, which crashes the renderer
+            maximum = minimum + 1
 
         # if is_log:
         #     maximum /= 70
@@ -165,14 +172,15 @@ class Widget(QtWidgets.QWidget):
             ax.scatter(gry.x, gry.y, s=gry_size, c='grey',
                        linewidths=0.5, edgecolors='k', alpha=alpha)
 
-        clr_size = (clr_size - minimum) / (maximum - minimum) * \
-            (max_factor - min_factor) + min_factor
-        sc = ax.scatter(clr.x, clr.y, s=clr_size, c=clr.color,
-                        cmap=rainbow_color_map, linewidths=0.5, edgecolors='k', alpha=alpha)
-        clrb = plot.fig.colorbar(sc)
-        clrb.ax.set_title(info.clr_title)
-        if clr.labels:
-            clrb.ax.set_yticklabels(clr.labels)
+        if len(clr.x) > 0:
+            clr_size = (clr_size - minimum) / (maximum - minimum) * \
+                (max_factor - min_factor) + min_factor
+            sc = ax.scatter(clr.x, clr.y, s=clr_size, c=clr.color,
+                            cmap=rainbow_color_map, linewidths=0.5, edgecolors='k', alpha=alpha)
+            clrb = plot.fig.colorbar(sc)
+            clrb.ax.set_title(self.clr_title)
+            if clr.labels:
+                clrb.ax.set_yticklabels(clr.labels)
 
         ax.autoscale(True)
         plot.fig.tight_layout()
@@ -192,14 +200,13 @@ class Widget(QtWidgets.QWidget):
 
     @ui_task
     async def export(self):
-        info = self.info
-        ret, f = savefile("Mass Defect", "CSV file(*.csv)", info.clr_title)
+        ret, f = savefile("Mass Defect", "CSV file(*.csv)", self.clr_title)
 
         if not ret:
             return
 
-        if info.clr_title == "atoms":
-            atoms = info.clr.labels
+        if self.clr_title == "atoms":
+            atoms = self.clr.labels
 
             def conv(value):
                 return atoms[value]
@@ -211,9 +218,9 @@ class Widget(QtWidgets.QWidget):
             writer = csv.writer(file)
             writer.writerow(['x', 'mass defect', 'intensity', 'color'])
 
-            writer.writerows(zip(info.clr.x, info.clr.y,
-                                 info.clr.size, map(conv, info.clr.color)))
-            writer.writerows(zip(info.gry.x, info.gry.y, info.gry.size))
+            writer.writerows(zip(self.clr.x, self.clr.y,
+                                 self.clr.size, map(conv, self.clr.color)))
+            writer.writerows(zip(self.gry.x, self.gry.y, self.gry.size))
 
 
 def find_formula(peak: FittedPeak):

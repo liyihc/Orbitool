@@ -22,8 +22,9 @@ and **right** bounds, then **Calc time series**.
 
 - Tick **show** in the table to plot a series; **Remove selected** / **all**
   drop them.
-- **Export time serieses** and **deviations**; per-series export is available in
-  the [Timeseries docker](dockers.md).
+- **Export time serieses** and **deviations** write every series to one CSV.
+  Highlight a row and press **Export selected** to write just that series
+  (the configured time formats, then intensity, position, deviation).
 - **y-log scale** and **autoscale y axis** adjust the plot.
 - **use retention time** displays retention time instead of clock time.
 

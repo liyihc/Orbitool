@@ -393,10 +393,20 @@ class Ui_Form(object):
 
         self.verticalLayout_4.addLayout(self.horizontalLayout_4)
 
+        self.horizontalLayout_6 = QHBoxLayout()
+        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
         self.actionAddToMassListPushButton = QPushButton(self.groupBox_2)
         self.actionAddToMassListPushButton.setObjectName(u"actionAddToMassListPushButton")
 
-        self.verticalLayout_4.addWidget(self.actionAddToMassListPushButton)
+        self.horizontalLayout_6.addWidget(self.actionAddToMassListPushButton)
+
+        self.actionMassDefectPushButton = QPushButton(self.groupBox_2)
+        self.actionMassDefectPushButton.setObjectName(u"actionMassDefectPushButton")
+
+        self.horizontalLayout_6.addWidget(self.actionMassDefectPushButton)
+
+
+        self.verticalLayout_4.addLayout(self.horizontalLayout_6)
 
 
         self.verticalLayout.addWidget(self.groupBox_2)
@@ -559,6 +569,10 @@ class Ui_Form(object):
 #if QT_CONFIG(shortcut)
         self.actionAddToMassListPushButton.setShortcut(QCoreApplication.translate("Form", u"Alt+A", None))
 #endif // QT_CONFIG(shortcut)
+#if QT_CONFIG(tooltip)
+        self.actionMassDefectPushButton.setToolTip(QCoreApplication.translate("Form", u"Plot the mass defect of the peaks currently shown.", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionMassDefectPushButton.setText(QCoreApplication.translate("Form", u"mass defect", None))
         self.scaleToSpectrumPushButton.setText(QCoreApplication.translate("Form", u"Scale to spectrum", None))
         self.leftToolButton.setText(QCoreApplication.translate("Form", u"\u2190", None))
 #if QT_CONFIG(shortcut)

@@ -4,12 +4,10 @@ rewritten as `ui_task` coroutines, so every relay endpoint now lives in the
 new mechanism.
 
 The batch is six default sites (the four workspace/config file handlers plus
-`setting_dialog` and `save`) and five `join` sites (the four relay handlers
+`setting_dialog` and `save`) and four `join` sites (the relay handlers
 `file_tab_finish` / `peak_shape_tab_finish` / `calibration_finish` /
-`show_spectrum` plus `noise_tab_finish`, which ticket 08 had already moved).
-`show_spectrum` loses the old argument switch and forwards its spectrum
-argument by signature. No site carries a former task generator or an old
-error-registration rewrite.
+`noise_tab_finish`, the last ticket 08 had already moved). No site carries a
+former task generator or an old error-registration rewrite.
 
 No RAW data is available (see `.scratch/ui-state-node-refactor/baseline.md`),
 so the end-to-end relay is exercised offscreen through the real signal wiring
@@ -23,12 +21,9 @@ Placed at the batch root (MainUiPy is a top-level `Orbitool/UI` module) and
 listed in `pytest.ini`.
 """
 import importlib
-from datetime import datetime, timedelta
 
-import numpy as np
 import pytest
 
-from ..models.spectrum import Spectrum
 # debug_settings is an autouse fixture re-exported for pytest
 from .tests.migration_harness import (  # noqa: F401
     MigrationEnv, debug_settings, task_module)
@@ -37,7 +32,7 @@ main_module = importlib.import_module("Orbitool.UI.MainUiPy")
 
 _ALL_SITES = [
     "setting_dialog", "load", "save", "save_as", "loadConfig", "saveConfig",
-    "file_tab_finish", "show_spectrum", "noise_tab_finish",
+    "file_tab_finish", "noise_tab_finish",
     "peak_shape_tab_finish", "calibration_finish",
 ]
 
@@ -64,23 +59,15 @@ def _stub_show_peak(window, monkeypatch):
     monkeypatch.setattr(type(window.peakShapeTab), "showPeak", fake_show_peak)
 
 
-def _spectrum():
-    start = datetime(2024, 1, 1, 12)
-    return Spectrum(
-        mz=np.array([100.0, 100.01, 100.02]),
-        intensity=np.array([1.0, 2.0, 1.0]),
-        path="none:", start_time=start, end_time=start + timedelta(minutes=1))
-
-
 # --------------------------------------------------------------------------
-# Decoration: all 11 sites are ui_task coroutines, the 5 relay sites join
+# Decoration: all 10 sites are ui_task coroutines, the 4 relay sites join
 # --------------------------------------------------------------------------
 
 def test_main_window_sites_are_coroutine_tasks():
     for name in _ALL_SITES:
         assert isinstance(
             main_module.Window.__dict__[name], task_module.ui_task), name
-    assert len(_ALL_SITES) == 11
+    assert len(_ALL_SITES) == 10
     # the plain method this ticket must not touch keeps its shape
     assert not isinstance(
         main_module.Window.__dict__["abort_process"], task_module.ui_task)
@@ -148,33 +135,6 @@ def test_relay_chain_tab_progression_keeps_busy(env, monkeypatch):
         manager.set_busy(False)
 
     assert manager.busy is False
-
-
-# --------------------------------------------------------------------------
-# show_spectrum: signature forwarding (the deleted argument switch)
-# --------------------------------------------------------------------------
-
-def test_show_spectrum_forwards_signature(env, monkeypatch):
-    window = env.window
-    seen = []
-    # patch the class, not the instance: an instance-level monkeypatch restores
-    # the original bound method into the QWidget instance dict, leaving a sip
-    # self-reference that can crash a later Qt test in the same process
-    monkeypatch.setattr(
-        type(window.spectrum), "show_spectrum", lambda self, s: seen.append(s))
-    window.spectrumDw.hide()
-
-    spectrum = _spectrum()
-    window.peakFitTab.show_spectrum.emit(spectrum)      # wired endpoint 1
-    assert seen == [spectrum]             # forwarded by signature, not the old switch
-    assert env.busy == [True, False]
-    assert not window.spectrumDw.isHidden()
-    env.reset()
-
-    window.noiseTab.selected_spectrum_average.emit(spectrum)  # wired endpoint 2
-    assert seen == [spectrum, spectrum]
-    assert env.busy == [True, False]
-    assert env.dialogs == []
 
 
 # --------------------------------------------------------------------------

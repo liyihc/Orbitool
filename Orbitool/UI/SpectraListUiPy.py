@@ -157,9 +157,11 @@ class Widget(QtWidgets.QWidget):
         rows = TableUtils.getSelectedRow(self.ui.tableWidget)
 
         if mode == "select":
+            shown_indexes = self.info.shown_indexes
+
             def iter_select():
                 for row in rows:
-                    yield spectra[row]
+                    yield spectra[shown_indexes[row]]
             iterator = iter_select()
         else:
             iterator = spectra

@@ -12,7 +12,7 @@ from types import MethodType
 
 import numpy as np
 from PySide6.QtCore import QObject, QThread, QTimer, Signal
-from PySide6.QtWidgets import QMainWindow, QTableWidget
+from PySide6.QtWidgets import QMainWindow, QTableWidget, QWidget
 
 from Orbitool.models.workspace import WorkSpace
 
@@ -56,6 +56,7 @@ class Manager(QObject):
         self.formulas_result_win: QMainWindow = None
         self.calibration_detail_win: QMainWindow = None
         self.peak_float_wins: Dict[int, QMainWindow] = {}
+        self.mass_defect_wins: List[QWidget] = []
 
         self.tqdm = TQDMER()
 

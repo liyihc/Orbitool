@@ -45,7 +45,6 @@ class MigrationEnv:
         self.msgs = []
         self.timeline = []
         self.callback_hits = []
-        self.click_series = []
         self.startup_dialogs = []
 
     def reset(self):
@@ -54,7 +53,6 @@ class MigrationEnv:
         self.msgs.clear()
         self.timeline.clear()
         self.callback_hits.clear()
-        self.click_series.clear()
         drain_dialog_queue()
 
     def _record_show_info(self, *args, **kwargs):

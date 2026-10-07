@@ -604,17 +604,31 @@
          </layout>
         </item>
         <item>
-         <widget class="QPushButton" name="actionAddToMassListPushButton">
-          <property name="toolTip">
-           <string>Alt+A</string>
-          </property>
-          <property name="text">
-           <string>&amp;add to mass list</string>
-          </property>
-          <property name="shortcut">
-           <string>Alt+A</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QPushButton" name="actionAddToMassListPushButton">
+            <property name="toolTip">
+             <string>Alt+A</string>
+            </property>
+            <property name="text">
+             <string>&amp;add to mass list</string>
+            </property>
+            <property name="shortcut">
+             <string>Alt+A</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="actionMassDefectPushButton">
+            <property name="toolTip">
+             <string>Plot the mass defect of the peaks currently shown.</string>
+            </property>
+            <property name="text">
+             <string>mass defect</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>

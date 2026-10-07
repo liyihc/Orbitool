@@ -1,4 +1,5 @@
 from array import array
+from copy import deepcopy
 from enum import Enum
 from itertools import chain
 from typing import Callable, List, Optional, Set, Tuple, cast
@@ -13,7 +14,7 @@ from Orbitool.models import peakfit as peakfit_func
 from Orbitool.models import spectrum as spectrum_func
 from Orbitool.models.formula import Formula, correct_formula, formula_range
 from Orbitool.models.peakfit import MassListHelper, MassListItem
-from Orbitool.models.spectrum import FittedPeak, Peak, PeakTags, Spectrum
+from Orbitool.models.spectrum import FittedPeak, Peak, PeakTags
 from Orbitool.utils import binary_search
 
 from . import PeakFitUi
@@ -27,8 +28,8 @@ class FitMethod(str, Enum):
 
 
 class Widget(QtWidgets.QWidget):
-    show_spectrum = QtCore.Signal(Spectrum)
     show_masslist = QtCore.Signal()
+    show_mass_defect = QtCore.Signal(list, str)  # deep-copied peaks + window title
     filter_selected = QtCore.Signal(bool)  # selected or unselected
 
     def __init__(self, manager: Manager) -> None:
@@ -97,6 +98,7 @@ class Widget(QtWidgets.QWidget):
         ui.fitPushButton.clicked.connect(self.fit)
         ui.addTagPushButton.clicked.connect(self.add_tag)
         ui.actionAddToMassListPushButton.clicked.connect(self.addToMassList)
+        ui.actionMassDefectPushButton.clicked.connect(self.openMassDefect)
         ui.actionRmTagPushButton.clicked.connect(self.remove_tag)
 
         # plots
@@ -176,7 +178,6 @@ class Widget(QtWidgets.QWidget):
         info.shown_intensity = np.concatenate(
             [peak.intensity for peak in raw_peaks])
 
-        self.show_spectrum.emit(info.spectrum)
         self.show_and_plot()
 
     def peak_refit_finish(self):
@@ -595,6 +596,17 @@ class Widget(QtWidgets.QWidget):
             masslist, MassListItem(position=fp.peak_position, formulas=fp.formulas), rtol=rtol), "add to mass list")
 
         self.show_masslist.emit()
+
+    @ui_task
+    async def openMassDefect(self):
+        info = self.info
+        peaks = [deepcopy(info.peaks[index]) for index in info.shown_indexes]
+        spectrum = info.spectrum
+        if spectrum is None:
+            title = "Mass Defect Untitled"
+        else:
+            title = f"Mass Defect {spectrum.start_time}-{spectrum.end_time}"
+        self.show_mass_defect.emit(peaks, title)
 
     @ui_task
     async def remove_tag(self):

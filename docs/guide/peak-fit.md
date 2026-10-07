@@ -17,7 +17,8 @@ Fit peaks and manage the fitted peaks shown in the [Peak List](dockers.md).
   **Fit** runs the fit. **Filter formulas with natural abundance** removes
   isotope peaks that don't match the natural distribution after fitting.
   **add to mass list** (`Alt + A`) and **Remove tag** (`Alt + R`) are bulk
-  operations.
+  operations. **mass defect** opens the [Mass Defect window](mass-defect.md)
+  for the peaks shown now.
 - **step** — build a series by repeatedly adding a **Group+** (`HO2`) then
   subtracting a **Group-**; **step according to mass** steps by mass instead of
   formula. **Step range** and `tolerance(ppm)` bound the search.

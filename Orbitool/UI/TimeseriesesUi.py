@@ -231,6 +231,11 @@ class Ui_Form(object):
 
         self.horizontalLayout.addWidget(self.exportTimeseriesPushButton)
 
+        self.exportSelectedPushButton = QPushButton(self.layoutWidget_3)
+        self.exportSelectedPushButton.setObjectName(u"exportSelectedPushButton")
+
+        self.horizontalLayout.addWidget(self.exportSelectedPushButton)
+
         self.exportDeviationPushButton = QPushButton(self.layoutWidget_3)
         self.exportDeviationPushButton.setObjectName(u"exportDeviationPushButton")
 
@@ -318,6 +323,7 @@ class Ui_Form(object):
         self.removeAllPushButton.setText(QCoreApplication.translate("Form", u"all", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"Export", None))
         self.exportTimeseriesPushButton.setText(QCoreApplication.translate("Form", u"time serieses", None))
+        self.exportSelectedPushButton.setText(QCoreApplication.translate("Form", u"selected", None))
         self.exportDeviationPushButton.setText(QCoreApplication.translate("Form", u"deviations", None))
         self.logScaleCheckBox.setText(QCoreApplication.translate("Form", u"y-log scale", None))
         self.rescalePushButton.setText(QCoreApplication.translate("Form", u"autoscale y axis", None))

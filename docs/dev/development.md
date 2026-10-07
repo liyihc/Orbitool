@@ -87,8 +87,8 @@ To run the real-GUI suite:
 
 The main window is `MainUiPy.Window` (hand-written) over the generated
 `MainUi.Ui_MainWindow` from `Main.ui`. The `QTabWidget` holds the left-to-right
-workflow tabs; the side panels (Mass List, Spectra List, Spectrum, Peak List,
-Timeseries) are `QDockWidget`s, not tabs.
+workflow tabs; the side panels (Spectra List, Peak List, Mass List) are
+`QDockWidget`s, not tabs.
 
 ## Packaging a release
 

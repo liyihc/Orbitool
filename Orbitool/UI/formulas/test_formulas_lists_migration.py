@@ -263,7 +263,8 @@ def test_peaklist_light_and_default_modes(env):
 # --------------------------------------------------------------------------
 
 def test_massdefect_light_and_default_modes(env, monkeypatch):
-    massdefect = env.window.massDefectTab
+    env.window.open_mass_defect([], "Mass Defect Untitled")
+    massdefect = env.window.manager.mass_defect_wins[-1]
 
     massdefect.replot()                         # was a light letter mode
     assert env.busy == []

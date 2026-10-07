@@ -20,23 +20,21 @@ def _series(position: float) -> TimeSeries:
         intensity=array("d", [1.0, 2.0]))
 
 
-def test_show_series_after_legacy_migration():
-    # a migrated workspace opens with an empty timeseries_infos table and a
-    # show_index saved by the old version; restore used to raise IndexError
+def test_restore_syncs_legacy_infos_without_error():
+    # a migrated workspace opens with an empty timeseries_infos table;
+    # restore must sync the infos without raising (the old docker table used
+    # to raise IndexError here)
     window = Window()
     try:
         workspace = window.manager.workspace
         for i in range(5):
             workspace.data.time_series.append(_series(100.0 + i))
         info = workspace.info.time_series_tab
-        info.show_index = 2
         assert info.timeseries_infos == []
 
-        window.timeseries.restore()
+        window.timeseriesesTab.restore()
 
         assert len(info.timeseries_infos) == 5
-        assert info.show_index == 2
-        assert window.timeseries.ui.tableWidget.rowCount() == 2
-        assert window.timeseries.ui.tableWidget.item(0, 1) is not None
+        assert window.timeseriesesTab.ui.tableWidget.rowCount() == 5
     finally:
         window.close()

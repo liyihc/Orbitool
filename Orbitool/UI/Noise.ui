@@ -287,6 +287,16 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
+               <widget class="QPushButton" name="exportSpectrumPushButton">
+                <property name="text">
+                 <string>Spectrum</string>
+                </property>
+                <property name="shortcut">
+                 <string>Ctrl+Alt+S</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QPushButton" name="exportDenoisedSpectrumPushButton">
                 <property name="text">
                  <string>Denoised spectrum</string>

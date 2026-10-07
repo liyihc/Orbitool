@@ -10,12 +10,13 @@ goes tab by tab; screenshots live in [`img/`](img/).
 ## Workflow
 
 ```
-Files ─▶ Noise ─▶ Peak Shape ─▶ Calibration ─▶ Peak Fit ─▶ Mass Defect / Timeseries
+Files ─▶ Noise ─▶ Peak Shape ─▶ Calibration ─▶ Peak Fit ─▶ Timeseries
  (average)  (denoise)            (per-file)     (fit)         (analysis)
 ```
 
 Each tab's **Finish and continue** button hands the result to the next tab. After
-Calibration the analysis tabs are independent.
+Calibration the analysis tabs are independent; the Mass Defect window is opened
+from Peak Fit.
 
 ## Pages
 
@@ -26,10 +27,10 @@ Calibration the analysis tabs are independent.
 | [Peak Shape Tab](peak-shape.md) | Estimate peak width from selected peaks |
 | [Calibration Tab](calibration.md) | Calibrate each file, optionally by mass segment |
 | [Peak Fit Tab](peak-fit.md) | Fit peaks, filter them, tag them |
-| [Mass Defect Tab](mass-defect.md) | Mass-defect plots colored by DBE/element |
+| [Mass Defect Window](mass-defect.md) | Mass-defect plots colored by DBE/element (opened from Peak Fit) |
 | [Timeseries Tab](timeseries.md) | Extract intensity time series |
 | [Formula Calculation](formula.md) | Formula input/output and search settings |
-| [Dockers](dockers.md) | The Mass List / Spectra / Spectrum / Peak List panels |
+| [Dockers](dockers.md) | The Spectra List / Peak List / Mass List panels |
 | [Workspace & Options](workspace.md) | Save/load workspaces and configuration |
 | [FAQ](faq.md) | Common problems |
 

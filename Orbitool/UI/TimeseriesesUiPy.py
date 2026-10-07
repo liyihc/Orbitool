@@ -7,7 +7,7 @@ from typing import Dict, Iterable, List, Literal, Optional, Tuple
 import matplotlib.lines
 import matplotlib.ticker
 import numpy as np
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtWidgets
 
 from Orbitool.base.disk_structure import DiskListDirectView
 from Orbitool.models.formula import Formula
@@ -27,7 +27,6 @@ from .utils import TableUtils, savefile, showInfo
 
 
 class Widget(QtWidgets.QWidget):
-    click_series = QtCore.Signal()
 
     def __init__(self, manager: Manager) -> None:
         super().__init__()
@@ -49,9 +48,9 @@ class Widget(QtWidgets.QWidget):
         ui.calcPeakPushButton.clicked.connect(self.calc_peak)
         ui.calcRangePushButton.clicked.connect(self.calc_sum)
 
-        ui.tableWidget.itemDoubleClicked.connect(self.seriesClicked)
         ui.removeSelectedPushButton.clicked.connect(self.removeSelect)
         ui.removeAllPushButton.clicked.connect(self.removeAll)
+        ui.exportSelectedPushButton.clicked.connect(self.exportSelected)
         ui.exportTimeseriesPushButton.clicked.connect(
             lambda: self.export("intensity"))
         ui.exportDeviationPushButton.clicked.connect(
@@ -234,30 +233,14 @@ class Widget(QtWidgets.QWidget):
         self.plot.canvas.draw()
 
     @ui_task
-    async def seriesClicked(self, item: QtWidgets.QTableWidgetItem):
-        row = item.row()
-        self.info.show_index = row
-
-        self.click_series.emit()
-
-    @ui_task
     async def removeSelect(self):
         indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
         timeseries = self.timeseries
         self.info.sync(timeseries)
         infos = self.info.timeseries_infos
-        show_index = self.info.show_index
         for index in reversed(indexes):
             del infos[index]
             del timeseries[index]
-        if show_index >= 0:
-            if show_index in indexes:
-                show_index = -1
-            else:
-                show_index -= (indexes < show_index).sum()
-                if show_index >= len(infos):
-                    show_index = -1
-            self.info.show_index = int(show_index)
         self.shown_series = {
             index - (index > indexes).sum(): line for index, line in self.shown_series.items()}
         await self.showTimeseries()
@@ -266,10 +249,48 @@ class Widget(QtWidgets.QWidget):
     async def removeAll(self):
         self.info.timeseries_infos.clear()
         self.timeseries.clear()
-        self.info.show_index = -1
         self.shown_series.clear()
         await self.showTimeseries()
         self.plot.ax.clear()
+
+    @ui_task
+    async def exportSelected(self):
+        indexes = TableUtils.getSelectedRow(self.ui.tableWidget)
+        if len(indexes) == 0:
+            return
+        index = int(indexes[0])
+        timeseries = self.timeseries
+        self.info.sync(timeseries)
+        infos = self.info.timeseries_infos
+        if index >= len(infos) or not infos[index].valid():
+            return
+
+        info = infos[index]
+        series = timeseries[index]
+        ret, f = savefile("timeseries", "CSV file(*.csv)",
+                          f"timeseries {info.get_name()}")
+        if not ret:
+            return
+
+        def func():
+            with open(f, 'w', newline='') as file:
+                writer = csv.writer(file)
+                formats = setting.timeseries.export_time_formats
+                time_formats = {k: v for k,
+                                (v, _) in converters.items() if k in formats}
+                row = [f"{time} time" for time in time_formats.keys()]
+                row.extend(["intensity", "position", "deviation"])
+                writer.writerow(row)
+                length = len(series.times)
+                for time, *row in zip(
+                        series.times, series.intensity,
+                        series.positions or [""] * length,
+                        series.get_deviations() or [""] * length):
+                    prt_time = time.replace(microsecond=0)
+                    writer.writerow([c(prt_time)
+                                    for c in time_formats.values()] + row)
+
+        await background(func)
 
     @ui_task
     async def export(self, target: Literal["intensity", "deviation"]):

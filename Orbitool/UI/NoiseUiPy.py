@@ -60,7 +60,6 @@ def reportDamagedFiles(damaged: thermo.DamagedScansByFile):
 
 
 class Widget(QtWidgets.QWidget):
-    selected_spectrum_average = QtCore.Signal(Spectrum)
     callback = QtCore.Signal(tuple)
 
     def __init__(self, manager: Manager) -> None:
@@ -86,6 +85,7 @@ class Widget(QtWidgets.QWidget):
         ui.delPushButton.clicked.connect(self.delFormula)
         ui.calculateNoisePushButton.clicked.connect(self.calcNoise)
         ui.recalculateNoisePushButton.clicked.connect(self.reclacNoise)
+        ui.exportSpectrumPushButton.clicked.connect(self.exportSpectrum)
         ui.exportDenoisedSpectrumPushButton.clicked.connect(
             self.exportDenoise)
         ui.exportNoisePeaksPushButton.clicked.connect(self.exportNoisePeaks)
@@ -180,7 +180,6 @@ class Widget(QtWidgets.QWidget):
         if success:
             self.info.current_spectrum = spectrum
             self.plotSelectSpectrum()
-            self.selected_spectrum_average.emit(spectrum)
             self.ui.denoisePushButton.setEnabled(False)
         else:
             showInfo("Spectra all may be filtered", "Empty spectra")
@@ -420,6 +419,28 @@ class Widget(QtWidgets.QWidget):
 
         self.moveToGlobalNoise()
         plot.canvas.draw()
+
+    @ui_task
+    async def exportSpectrum(self):
+        spectrum = self.info.current_spectrum
+        if spectrum is None:
+            showInfo("Please show a spectrum first")
+            return
+
+        ret, f = savefile("Save Spectrum", "CSV file(*.csv)",
+                          f"raw_spectrum {spectrum.start_time.strftime(setting.general.export_time_format)}"
+                          f"-{spectrum.end_time.strftime(setting.general.export_time_format)}.csv")
+        if not ret:
+            return
+
+        def export():
+            with open(f, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["mz", "intensity"])
+                writer.writerows(progress.tqdm(
+                    zip(spectrum.mz, spectrum.intensity), length=len(spectrum.mz)))
+
+        await background(export, "export")
 
     @ui_task
     async def exportDenoise(self):

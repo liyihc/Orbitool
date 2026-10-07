@@ -31,8 +31,12 @@ steps below.
    then **Finish and continue** (`Return`).
 5. **Calibration** — add reference ions, **Calc calibrate info** (`Alt + C`),
    then **Calibrate and continue** (`Return`).
-6. **Peak Fit** — filter the peaks, **Fit**, and tag the results.
-7. **Mass Defect** / **Timeseries** — explore and export the final data.
+6. **Peak Fit** — filter the peaks, **Fit**, and tag the results. **mass defect**
+   opens a pop-up that plots the peaks currently shown.
+7. **Timeseries** — explore and export the final data.
+
+The Spectra List, Peak List, and Mass List dockers stay visible on the left on
+every tab.
 
 Full details, tab by tab, are in the [user guide](docs/guide/index.md). Common
 problems are in the [FAQ](docs/guide/faq.md).

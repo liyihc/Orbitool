@@ -195,6 +195,11 @@ class Ui_Form(object):
         self.groupBox.setObjectName(u"groupBox")
         self.horizontalLayout_4 = QHBoxLayout(self.groupBox)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.exportSpectrumPushButton = QPushButton(self.groupBox)
+        self.exportSpectrumPushButton.setObjectName(u"exportSpectrumPushButton")
+
+        self.horizontalLayout_4.addWidget(self.exportSpectrumPushButton)
+
         self.exportDenoisedSpectrumPushButton = QPushButton(self.groupBox)
         self.exportDenoisedSpectrumPushButton.setObjectName(u"exportDenoisedSpectrumPushButton")
 
@@ -338,6 +343,10 @@ class Ui_Form(object):
         self.recalculateNoisePushButton.setShortcut(QCoreApplication.translate("Form", u"Alt+R", None))
 #endif // QT_CONFIG(shortcut)
         self.groupBox.setTitle(QCoreApplication.translate("Form", u"Export", None))
+        self.exportSpectrumPushButton.setText(QCoreApplication.translate("Form", u"Spectrum", None))
+#if QT_CONFIG(shortcut)
+        self.exportSpectrumPushButton.setShortcut(QCoreApplication.translate("Form", u"Ctrl+Alt+S", None))
+#endif // QT_CONFIG(shortcut)
         self.exportDenoisedSpectrumPushButton.setText(QCoreApplication.translate("Form", u"Denoised spectrum", None))
 #if QT_CONFIG(shortcut)
         self.exportDenoisedSpectrumPushButton.setShortcut(QCoreApplication.translate("Form", u"Ctrl+Alt+D", None))
