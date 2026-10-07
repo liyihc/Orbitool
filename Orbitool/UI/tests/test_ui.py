@@ -13,7 +13,7 @@ from .routine import init, fileui, file_spectra, noise, qt_exit
 def test_precedure(caplog):
     # caplog instead of a hand-attached handler: the routine must not log an
     # error, and a handler added here would have to be removed again by hand
-    # (conftest.py restores the logger afterwards anyway).
+    # (the logger is a process-wide singleton).
     with caplog.at_level(logging.ERROR, logger="Orbitool"):
         app = QtWidgets.QApplication([])
         window = Window()

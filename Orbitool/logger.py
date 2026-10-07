@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import logging
 import logging.handlers
+import sys
 from sys import stdout
 from paths import LOG_PATH
 
@@ -9,14 +10,18 @@ logLevel = "DEBUG"
 
 formatter = logging.Formatter(
     "%(asctime)s -%(levelname)s- %(message)s")
-log_file_handler = logging.handlers.TimedRotatingFileHandler(LOG_PATH, when="midnight", encoding='utf-8')
-log_file_handler.setFormatter(formatter)
 std_handler = logging.StreamHandler(stdout)
 std_handler.setFormatter(formatter)
 _logger = logging.getLogger("Orbitool")
 _logger.setLevel(logLevel)
-_logger.addHandler(log_file_handler)
 _logger.addHandler(std_handler)
+# Under pytest, skip the file log so the suite never appends to (or creates) the
+# repository's log.txt.  pytest is imported before the app whenever the suite
+# runs, so this check is reliable at import time.
+if "pytest" not in sys.modules:
+    log_file_handler = logging.handlers.TimedRotatingFileHandler(LOG_PATH, when="midnight", encoding='utf-8')
+    log_file_handler.setFormatter(formatter)
+    _logger.addHandler(log_file_handler)
 
 @dataclass
 class _Logger:
