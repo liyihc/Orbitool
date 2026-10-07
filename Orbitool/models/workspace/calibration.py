@@ -30,6 +30,20 @@ class CalibratorInfoSegment(BaseRowStructure):
     rtol: float = 2e-6
 
 
+class CalibratedNoiseLOD(BaseRowStructure):
+    """One row of the noise/LOD table computed for a calibrated spectrum.
+
+    Rows come in blocks: a `formula="global"` row (with a blank mass) followed by
+    one row per noise mass point. `spectrum_index` is the index into
+    `calibrated_spectrum_infos` / `data/calibrated_spectra` the block belongs to.
+    """
+    spectrum_index: int
+    formula: str
+    mass: float
+    noise: float
+    LOD: float
+
+
 class CalibratorInfo(BaseInfo):
     skip: bool = False
 
@@ -50,6 +64,11 @@ class CalibratorInfo(BaseInfo):
 
     # [calibrated spectrum info for each spectrum]
     calibrated_spectrum_infos: List[SpectrumInfo] = []
+
+    # per calibrated spectrum: the noise/LOD table produced while denoising, in
+    # the same order as `calibrated_spectrum_infos`. Empty for workspaces
+    # calibrated before this was recorded, and when denoise was skipped.
+    noise_lod: List[CalibratedNoiseLOD] = []
 
     def add_segment(self, separator: float):
         pos = 0

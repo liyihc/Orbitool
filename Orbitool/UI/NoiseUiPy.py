@@ -1,6 +1,6 @@
 import csv
+import math
 import os
-from collections import deque
 from copy import copy
 from tkinter import W
 from typing import Generator, Iterable, List, Optional, Tuple, Union
@@ -22,10 +22,9 @@ from Orbitool.utils import binary_search
 from Orbitool.utils.readers import thermo
 
 from . import NoiseUi, component
-from .component import factory
 from .manager import Manager, MultiProcess, ui_task, background, progress
-from .utils import (TableUtils, get_tablewidget_selected_row, savefile, set_header_sizes,
-                    showInfo)
+from .utils import (TableUtils, format_noise_lod, get_tablewidget_selected_row,
+                    savefile, set_header_sizes, showInfo, write_noise_lod_csv)
 
 
 TAG = "NoiseUiPy"
@@ -77,18 +76,18 @@ class Widget(QtWidgets.QWidget):
         ui.setupUi(self)
 
         set_header_sizes(ui.paramTableWidget.horizontalHeader(), [
-                         100, 100, 150, 150])
+                         150, 150, 150])
         self.plot = component.Plot(ui.widget)
         ui.toolBox.setCurrentIndex(0)
         ui.showAveragePushButton.clicked.connect(self.showSelectedSpectrum)
         ui.addPushButton.clicked.connect(self.addFormula)
         ui.delPushButton.clicked.connect(self.delFormula)
         ui.calculateNoisePushButton.clicked.connect(self.calcNoise)
-        ui.recalculateNoisePushButton.clicked.connect(self.reclacNoise)
         ui.exportSpectrumPushButton.clicked.connect(self.exportSpectrum)
         ui.exportDenoisedSpectrumPushButton.clicked.connect(
             self.exportDenoise)
         ui.exportNoisePeaksPushButton.clicked.connect(self.exportNoisePeaks)
+        ui.exportNoiseLODPushButton.clicked.connect(self.exportNoiseLOD)
         ui.denoisePushButton.clicked.connect(self.denoise)
         ui.skipPushButton.clicked.connect(self.skip)
 
@@ -265,114 +264,56 @@ class Widget(QtWidgets.QWidget):
         formula_params = noise_setting.noise_formulas
         for index, (i, s, d) in enumerate(zip(ind, slt, mass_point_deltas)):
             p = formula_params[index]
-            p.selected = p.useable = bool(s)
+            p.useable = bool(s)
             if s:
                 p.param = params[i]
             p.delta = d
 
         self.showNoise()
 
-    @ui_task
-    async def reclacNoise(self):
-        table = self.ui.paramTableWidget
-        checkeds, noises, lods = deque(), deque(), deque()
+    def noiseLODTable(self):
+        """The Noise results table as (name, mass, noise, LOD) rows.
 
-        for index in range(table.rowCount()):
-            checkbox: QtWidgets.QCheckBox = table.cellWidget(index, 0)
-            checkeds.append(checkbox.isChecked())
-
-            spinbox: QtWidgets.QDoubleSpinBox = table.cellWidget(index, 2)
-            noises.append(spinbox.value())
-
-            spinbox: QtWidgets.QDoubleSpinBox = table.cellWidget(index, 3)
-            lods.append(spinbox.value())
-
-        info = self.info
-
-        checkeds.popleft()
-        result = info.general_result
-        result.poly_coef, result.global_noise_std = spectrum_func.updateGlobalParam(
-            result.poly_coef, info.general_setting.n_sigma, noises.popleft(), lods.popleft())
-
-        for param, checked, noise, lod in zip(info.general_setting.noise_formulas, checkeds, noises, lods):
-            if param.useable:
-                param.param = spectrum_func.updateNoiseLODParam(
-                    param.param, info.general_setting.n_sigma, noise, lod)
-                param.selected = checked
-
-        noise_setting = info.general_setting
-        spectrum = info.current_spectrum
-
-        def func():
-            params, points, deltas = noise_setting.get_params()
-            noise, LOD = spectrum_func.noiseLODFunc(
-                spectrum.mz, result.poly_coef, result.global_noise_std,
-                params, points, deltas, noise_setting.n_sigma)
-            if setting.denoise.plot_noise_in_diff_color:
-                noise_split = spectrum_func.splitNoise(
-                    spectrum.mz, spectrum.intensity, result.poly_coef, result.global_noise_std,
-                    params, points, deltas, noise_setting.n_sigma)
-            else:
-                noise_split = (None,) * 4
-            return noise, LOD, noise_split
-        noise, LOD, noise_split = await background(func, "recalc noise")
-        result.noise = NoiseArray(noise=noise, LOD=LOD)
-        result.spectrum_split = MzIntensity(
-            mz=noise_split[0], intensity=noise_split[1])
-        result.noise_split = MzIntensity(
-            mz=noise_split[2], intensity=noise_split[3])
-
-        self.showNoise()
-
-    def showNoise(self):
-        ui = self.ui
+        Row 0 is `global` (mass blank); the rest follow `noise_formulas`. A mass
+        point the fit could not use reads 0, matching the old editable table and
+        the exported CSV. This is read-only: the values are whatever the last
+        calculation produced.
+        """
         info = self.info
         noise_setting = info.general_setting
         result = info.general_result
         n_sigma = noise_setting.n_sigma
-        std = result.global_noise_std
-
-        if not noise_setting.params_inited:
-            return
         global_noise, global_lod = spectrum_func.getGlobalShownNoise(
-            result.poly_coef, n_sigma, std)
-
-        useables = [True]
-        checkeds = [True]
-        names = ["global"]
-
-        noises = [global_noise]
-        lods = [global_lod]
+            result.poly_coef, n_sigma, result.global_noise_std)
+        rows = [("global", math.nan, global_noise, global_lod)]
         for param in noise_setting.noise_formulas:
-            useables.append(param.useable)
-            checkeds.append(param.selected)
-            names.append(str(param.formula))
             if param.useable:
                 noise, lod = spectrum_func.getNoiseLODFromParam(
                     param.param, n_sigma)
-                noises.append(noise)
-                lods.append(lod)
             else:
-                noises.append(0)
-                lods.append(0)
+                noise, lod = 0.0, 0.0
+            rows.append((str(param.formula), param.formula.mass(), noise, lod))
+        return rows
 
+    def showNoise(self):
+        ui = self.ui
+        noise_setting = self.info.general_setting
+
+        if not noise_setting.params_inited:
+            return
+
+        rows = self.noiseLODTable()
         table = ui.paramTableWidget
         table.clearContents()
         table.setRowCount(0)
-        table.setRowCount(len(checkeds))
+        table.setRowCount(len(rows))
 
-        for i, (useable, checked, name, noise, lod) in enumerate(zip(useables, checkeds, names, noises, lods)):
-            checkBox = factory.CheckBox(checked)
-            noisespinbox = factory.DoubleSpinBox(-1e10, 1e11, 1, 1, noise)
-            lodspinbox = factory.DoubleSpinBox(-1e10, 1e11, 1, 1, lod)
-            checkBox.setEnabled(useable and i)
-            noisespinbox.setEnabled(useable)
-            lodspinbox.setEnabled(useable)
-
-            table.setCellWidget(i, 0, checkBox)
-            table.setItem(i, 1, QtWidgets.QTableWidgetItem(name))
-            table.setCellWidget(i, 2, noisespinbox)
-            table.setCellWidget(i, 3, lodspinbox)
+        for i, (name, mass, noise, lod) in enumerate(rows):
+            table.setItem(i, 0, QtWidgets.QTableWidgetItem(name))
+            table.setItem(i, 1, QtWidgets.QTableWidgetItem(
+                format_noise_lod(noise)))
+            table.setItem(i, 2, QtWidgets.QTableWidgetItem(
+                format_noise_lod(lod)))
 
         ui.toolBox.setCurrentWidget(ui.paramTool)
         self.plotNoise()
@@ -506,6 +447,27 @@ class Widget(QtWidgets.QWidget):
                 writer.writerows(progress.tqdm(
                     zip(mz, intensity), length=len(mz)))
         await background(export, "export")
+
+    @ui_task
+    async def exportNoiseLOD(self):
+        info = self.info
+        spectrum = info.current_spectrum
+        if spectrum is None:
+            showInfo("Please show a spectrum first")
+            return
+        if not info.general_setting.params_inited:
+            showInfo("Please calculate noise first")
+            return
+
+        ret, f = savefile(
+            "Save Noise & LOD", "CSV file(*.csv)",
+            f"noise_LOD {spectrum.start_time.strftime(setting.general.export_time_format)}"
+            f"-{spectrum.end_time.strftime(setting.general.export_time_format)}.csv")
+        if not ret:
+            return
+
+        rows = self.noiseLODTable()
+        await background(lambda: write_noise_lod_csv(f, rows), "export")
 
     @ui_task
     async def denoise(self):

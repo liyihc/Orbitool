@@ -15,7 +15,6 @@ class NoiseFormulaParameter(BaseRowStructure):
     delta: float = 5
 
     useable: bool = True
-    selected: bool = True
     param: NdArray[float, (2, 3)] = np.empty((2, 3), float)
 
 
@@ -43,7 +42,7 @@ class NoiseGeneralSetting(BaseStructure):
         """
         params, points, deltas = [], [], []
         for param in self.noise_formulas:
-            if not only_useable_point or param.selected:
+            if not only_useable_point or param.useable:
                 params.append(param.param)
                 points.append(param.formula.mass())
                 deltas.append(param.delta)

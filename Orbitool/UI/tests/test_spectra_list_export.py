@@ -15,6 +15,7 @@ import pytest
 
 from ...models.file import FileSpectrumInfo
 from ...models.spectrum import Spectrum
+from ...models.workspace.calibration import CalibratedNoiseLOD
 # debug_settings is an autouse fixture re-exported for pytest
 from .migration_harness import MigrationEnv, debug_settings  # noqa: F401
 
@@ -77,3 +78,61 @@ def test_select_exports_the_selected_shown_row(env, tmp_path, monkeypatch):
         rows = list(csv.reader(f))
     assert rows[0] == ["mz", "intensity"]
     assert [row[1] for row in rows[1:]] == ["30.0", "30.5"]
+
+
+def test_noise_lod_export_writes_one_file_per_calibrated_spectrum(
+        env, tmp_path, monkeypatch):
+    window = env.window
+    widget = window.spectraList
+    workspace = window.manager.workspace
+    workspace.data.calibrated_spectra.clear()
+    workspace.data.calibrated_spectra.append(_spectrum(0, 10.0))
+    workspace.data.calibrated_spectra.append(_spectrum(2, 20.0))
+    workspace.info.calibration_tab.noise_lod = [
+        CalibratedNoiseLOD(spectrum_index=0, formula="global", mass=float("nan"),
+                           noise=1.0, LOD=2.0),
+        CalibratedNoiseLOD(spectrum_index=1, formula="NO3-", mass=61.9884,
+                           noise=0.3, LOD=0.6),
+    ]
+    monkeypatch.setattr(
+        spectra_list_module, "openfolder",
+        lambda *a, **k: (True, str(tmp_path)))
+    monkeypatch.setattr(
+        spectra_list_module.os, "startfile", lambda *a, **k: None)
+
+    widget.exportNoiseLOD()
+
+    assert env.dialogs == []
+    files = sorted(tmp_path.glob("noise_LOD*.csv"))
+    assert len(files) == 2
+    with open(files[0], newline="") as f:
+        first = list(csv.reader(f))
+    assert first[0] == ["formula", "mass", "noise", "LOD"]
+    assert len(first) == 2                       # just the global row
+    assert first[1][0] == "global"
+    assert first[1][1] == ""
+    assert float(first[1][3]) == 2.0
+    with open(files[1], newline="") as f:
+        second = list(csv.reader(f))
+    assert [row[0] for row in second[1:]] == ["NO3-"]
+    assert float(second[1][1]) == 61.9884
+
+
+def test_noise_lod_export_button_needs_calibrate_data(env):
+    widget = env.window.spectraList
+    button = widget.ui.exportNoiseLODPushButton
+    combo = widget.ui.comboBox
+
+    combo.setCurrentIndex(spectra_list_module.FILE_TAB)
+    widget._update_export_noise_lod_enabled()
+    assert not button.isEnabled()
+
+    combo.setCurrentIndex(spectra_list_module.CALIBRATE_TAB)
+    widget._update_export_noise_lod_enabled()
+    assert not button.isEnabled()               # nothing recorded yet
+
+    env.window.manager.workspace.info.calibration_tab.noise_lod = [
+        CalibratedNoiseLOD(spectrum_index=0, formula="global", mass=float("nan"),
+                           noise=1.0, LOD=2.0)]
+    widget._update_export_noise_lod_enabled()
+    assert button.isEnabled()

@@ -87,6 +87,21 @@ class Ui_Form(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
+        self.horizontalLayout_noise_lod = QHBoxLayout()
+        self.horizontalLayout_noise_lod.setObjectName(u"horizontalLayout_noise_lod")
+        self.label_4 = QLabel(Form)
+        self.label_4.setObjectName(u"label_4")
+
+        self.horizontalLayout_noise_lod.addWidget(self.label_4)
+
+        self.exportNoiseLODPushButton = QPushButton(Form)
+        self.exportNoiseLODPushButton.setObjectName(u"exportNoiseLODPushButton")
+
+        self.horizontalLayout_noise_lod.addWidget(self.exportNoiseLODPushButton)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_noise_lod)
+
 
         self.retranslateUi(Form)
 
@@ -104,5 +119,7 @@ class Ui_Form(object):
         self.exportSelectPushButton.setText(QCoreApplication.translate("Form", u"Select", None))
         self.exportAllPushButton.setText(QCoreApplication.translate("Form", u"All", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"spectra", None))
+        self.label_4.setText(QCoreApplication.translate("Form", u"export per-spectrum noise/LOD", None))
+        self.exportNoiseLODPushButton.setText(QCoreApplication.translate("Form", u"noise & LOD", None))
     # retranslateUi
 

@@ -99,17 +99,35 @@
        </property>
       </widget>
      </item>
-     <item>
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>spectra</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-  </layout>
- </widget>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>spectra</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_noise_lod">
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>export per-spectrum noise/LOD</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="exportNoiseLODPushButton">
+        <property name="text">
+         <string>noise &amp; LOD</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
  <resources/>
  <connections/>
 </ui>

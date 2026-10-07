@@ -15,7 +15,7 @@ from Orbitool.models.spectrum import Spectrum, SpectrumInfo
 from Orbitool.models.calibration import Calibrator
 from Orbitool.models.peakfit.normal_distribution import NormalDistributionFunc
 from Orbitool.models.workspace import WorkSpace
-from Orbitool.models.workspace.calibration import CalibratorInfoSegment
+from Orbitool.models.workspace.calibration import CalibratedNoiseLOD, CalibratorInfoSegment
 from Orbitool.utils import binary_search
 
 from . import CalibrationUi
@@ -370,24 +370,33 @@ class Widget(QtWidgets.QWidget):
             return
         rtol = workspace.info.file_tab.rtol
         noise_skip = noise_info.skip
-        setting = noise_info.general_setting
+        noise_setting = noise_info.general_setting
         result = noise_info.general_result
-        dependent = setting.mass_dependent
-        params, points, deltas = setting.get_params(not dependent)
+        # `Spectrum-dependent params` decides whether each calibrated spectrum
+        # gets its own refit; `mass-dependent noise` only shapes that fit (a line
+        # in m/z vs a flat level). When refitting we hand over every mass point;
+        # when reusing the Noise tab's model we hand over only the usable ones.
+        spectrum_dependent = noise_setting.spectrum_dependent
+        params, points, deltas = noise_setting.get_params(
+            only_useable_point=not spectrum_dependent)
         func_kwargs = {
             "noise_skip": noise_skip,
             "calibrate_skip": skip,
             "average_rtol": rtol,
-            "quantile": setting.quantile,
-            "mass_dependent": setting.mass_dependent,
-            "n_sigma": setting.n_sigma,
-            "dependent": dependent,
+            "quantile": noise_setting.quantile,
+            "mass_dependent": noise_setting.mass_dependent,
+            "n_sigma": noise_setting.n_sigma,
+            "spectrum_dependent": spectrum_dependent,
             "points": points,
             "deltas": deltas,
             "params": params,
-            "subtract": setting.subtract,
+            "subtract": noise_setting.subtract,
             "poly_coef": result.poly_coef,
-            "std": result.global_noise_std}
+            "std": result.global_noise_std,
+            "formula_names": [str(f.formula) for f in noise_setting.noise_formulas],
+            "formula_masses": [f.formula.mass() for f in noise_setting.noise_formulas],
+            "formula_deltas": [int(f.delta) for f in noise_setting.noise_formulas],
+            "formula_useable": [bool(f.useable) for f in noise_setting.noise_formulas]}
         calibrate_merge = CalibrateMergeDenoise(
             self.manager.workspace, func_kwargs=func_kwargs)
         msg = []
@@ -498,8 +507,11 @@ class CalibrateMergeDenoise(MultiProcess):
     def func(data: List[Tuple[Spectrum, List[float], List[Calibrator]]],
              noise_skip: bool, calibrate_skip: bool, average_rtol: float,
              quantile: float, mass_dependent: bool, n_sigma: bool,
-             dependent: bool, points: np.ndarray, deltas: np.ndarray,
-             params: np.ndarray, subtract: bool, poly_coef: np.ndarray, std: float) -> Spectrum:
+             spectrum_dependent: bool, points: np.ndarray, deltas: np.ndarray,
+             params: np.ndarray, subtract: bool, poly_coef: np.ndarray, std: float,
+             formula_names: List[str], formula_masses: List[float],
+             formula_deltas: List[int], formula_useable: List[bool]
+             ) -> Tuple[Spectrum, List[Tuple[str, float, float, float]]]:
         if not data:
             raise ValueError("no denoised spectra to calibrate")
         spectra = []
@@ -526,12 +538,45 @@ class CalibrateMergeDenoise(MultiProcess):
         mz, intensity = spectrum_func.averageSpectra(
             spectra, average_rtol, drop_input=True)
 
+        # (formula, mass, noise, LOD); the "global" row carries a blank mass. This
+        # is the same table the Noise tab shows, computed on the calibrated and
+        # averaged spectrum, and it is what the Spectra List export writes later.
+        rows: List[Tuple[str, float, float, float]] = []
+
         if not noise_skip:
-            if not dependent:
+            if spectrum_dependent:
+                fit_points = np.asarray(formula_masses, dtype=float)
+                fit_deltas = np.asarray(formula_deltas, dtype=np.int32)
                 poly_coef, std, slt, params = spectrum_func.getNoiseParams(
-                    mz, intensity, quantile, mass_dependent, points, deltas)
-                points = points[slt]
-                deltas = deltas[slt]
+                    mz, intensity, quantile, mass_dependent, fit_points, fit_deltas)
+                points = fit_points[slt]
+                deltas = fit_deltas[slt]
+                param_index = 0
+                for i, name in enumerate(formula_names):
+                    if slt[i]:
+                        noise, lod = spectrum_func.getNoiseLODFromParam(
+                            params[param_index], n_sigma)
+                        param_index += 1
+                    else:
+                        noise, lod = 0.0, 0.0
+                    rows.append((name, float(formula_masses[i]),
+                                 float(noise), float(lod)))
+            else:
+                param_index = 0
+                for i, name in enumerate(formula_names):
+                    if formula_useable[i]:
+                        noise, lod = spectrum_func.getNoiseLODFromParam(
+                            params[param_index], n_sigma)
+                        param_index += 1
+                    else:
+                        noise, lod = 0.0, 0.0
+                    rows.append((name, float(formula_masses[i]),
+                                 float(noise), float(lod)))
+
+            global_noise, global_lod = spectrum_func.getGlobalShownNoise(
+                poly_coef, n_sigma, std)
+            rows.insert(0, ("global", math.nan,
+                            float(global_noise), float(global_lod)))
 
             mz, intensity = spectrum_func.denoiseWithParams(
                 mz, intensity, poly_coef, std, params, points, deltas, n_sigma, subtract)
@@ -539,21 +584,28 @@ class CalibrateMergeDenoise(MultiProcess):
         spectrum = Spectrum(
             mz=mz, intensity=intensity, path=path,
             start_time=min(start_times), end_time=max(end_times))
-        return spectrum
+        return spectrum, rows
 
     @staticmethod
-    def write(file: WorkSpace, rets: Iterable[Spectrum], **kwargs):
+    def write(file: WorkSpace, rets: Iterable[Tuple[Spectrum, List[Tuple[str, float, float, float]]]], **kwargs):
         obj = (file.proxy_file or file.file)._obj
         tmp = DiskListDirectView(Spectrum, obj, "tmp")
         infos = []
+        noise_lod: List[CalibratedNoiseLOD] = []
 
         def it():
-            for spectrum in rets:
+            for spectrum, rows in rets:
+                index = len(infos)
                 infos.append(SpectrumInfo(
                     start_time=spectrum.start_time, end_time=spectrum.end_time))
+                for formula, mass, noise, lod in rows:
+                    noise_lod.append(CalibratedNoiseLOD(
+                        spectrum_index=index, formula=formula, mass=mass,
+                        noise=noise, LOD=lod))
                 yield spectrum
         tmp.extend(it())
         file.info.calibration_tab.calibrated_spectrum_infos = infos
+        file.info.calibration_tab.noise_lod = noise_lod
         path = file.data.calibrated_spectra.obj.name
         del obj[path]
         obj.move(tmp.obj.name, path)

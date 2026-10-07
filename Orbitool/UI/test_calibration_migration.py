@@ -28,9 +28,11 @@ import pytest
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from ..models.file import FileSpectrumInfo
+from ..models.formula import Formula
 from ..models.peakfit.normal_distribution import NormalDistributionFunc
 from ..models.spectrum import FittedPeak, Peak, Spectrum
 from ..models.workspace.calibration import default_ions
+from ..models.workspace.noise_tab import NoiseFormulaParameter
 # debug_settings is an autouse fixture re-exported for pytest
 from .tests.migration_harness import (  # noqa: F401
     MigrationEnv, debug_settings, task_module)
@@ -258,6 +260,38 @@ def test_calibration_calibrate_runs_merge_and_emits_callback(env):
     info = window.manager.workspace.info.calibration_tab
     assert len(info.calibrated_spectrum_infos) == 1
     assert len(window.manager.workspace.data.calibrated_spectra) == 1
+    assert info.noise_lod == []             # denoise was skipped
+
+
+def test_calibration_records_noise_lod_tables(env):
+    window = env.window
+    widget = window.calibrationTab
+    noise_info = window.manager.workspace.info.noise_tab
+    noise_info.skip = False
+    noise_info.denoised_spectrum_infos = [_file_spectrum_info()]
+    window.manager.workspace.data.raw_spectra.clear()
+    window.manager.workspace.data.raw_spectra.append(_spectrum())
+
+    noise_setting = noise_info.general_setting
+    noise_setting.params_inited = True
+    noise_setting.n_sigma = 1.0
+    noise_setting.spectrum_dependent = False    # reuse the stored params
+    noise_setting.noise_formulas = [NoiseFormulaParameter(
+        formula=Formula("NO3-"), useable=True,
+        param=np.array([[1.0, 0.0, 1.0], [1.0, 0.0, 1.0]]))]
+    noise_info.general_result.poly_coef = np.array([2.0])
+    noise_info.general_result.global_noise_std = 1.0
+
+    widget.calibrate(skip=True)
+
+    assert env.dialogs == []
+    info = window.manager.workspace.info.calibration_tab
+    assert len(info.calibrated_spectrum_infos) == 1
+    rows = info.noise_lod
+    assert [row.spectrum_index for row in rows] == [0, 0]
+    assert [row.formula for row in rows] == ["global", str(Formula("NO3-"))]
+    assert rows[0].mass != rows[0].mass          # the global row has a blank mass
+    assert rows[1].mass == pytest.approx(Formula("NO3-").mass())
 
 
 def test_calibration_calibrate_without_info_is_blocked(env):

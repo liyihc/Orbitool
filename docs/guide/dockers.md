@@ -12,6 +12,11 @@ into floating windows or rearranged:
 The averaged spectra produced by the [Files tab](file-tab.md). **show spectra
 after** filters by time; **Select** / **All** export them.
 
+**noise & LOD** (Calibrate tab only) exports the per-spectrum noise/LOD table
+recorded during calibration — one `noise_LOD <time range>.csv` per calibrated
+spectrum, columns `formula, mass, noise, LOD`. It is disabled until the
+workspace has been calibrated with denoise, which is what records the tables.
+
 ## Peak List
 
 The fitted peaks for the current spectrum.

@@ -16,11 +16,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QDoubleSpinBox,
-    QFormLayout, QFrame, QGroupBox, QHBoxLayout,
-    QHeaderView, QLabel, QLineEdit, QPushButton,
-    QSizePolicy, QSpacerItem, QSplitter, QTableWidget,
-    QTableWidgetItem, QToolBox, QToolButton, QVBoxLayout,
-    QWidget)
+    QFormLayout, QFrame, QGridLayout, QGroupBox,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
+    QTableWidget, QTableWidgetItem, QToolBox, QToolButton,
+    QVBoxLayout, QWidget)
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -165,16 +165,14 @@ class Ui_Form(object):
         self.verticalLayout_3 = QVBoxLayout(self.paramTool)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.paramTableWidget = QTableWidget(self.paramTool)
-        if (self.paramTableWidget.columnCount() < 4):
-            self.paramTableWidget.setColumnCount(4)
+        if (self.paramTableWidget.columnCount() < 3):
+            self.paramTableWidget.setColumnCount(3)
         __qtablewidgetitem3 = QTableWidgetItem()
         self.paramTableWidget.setHorizontalHeaderItem(0, __qtablewidgetitem3)
         __qtablewidgetitem4 = QTableWidgetItem()
         self.paramTableWidget.setHorizontalHeaderItem(1, __qtablewidgetitem4)
         __qtablewidgetitem5 = QTableWidgetItem()
         self.paramTableWidget.setHorizontalHeaderItem(2, __qtablewidgetitem5)
-        __qtablewidgetitem6 = QTableWidgetItem()
-        self.paramTableWidget.setHorizontalHeaderItem(3, __qtablewidgetitem6)
         self.paramTableWidget.setObjectName(u"paramTableWidget")
         self.paramTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.paramTableWidget.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
@@ -182,33 +180,33 @@ class Ui_Form(object):
 
         self.verticalLayout_3.addWidget(self.paramTableWidget)
 
-        self.recalculateNoisePushButton = QPushButton(self.paramTool)
-        self.recalculateNoisePushButton.setObjectName(u"recalculateNoisePushButton")
-
-        self.verticalLayout_3.addWidget(self.recalculateNoisePushButton)
-
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_3.addItem(self.verticalSpacer)
 
         self.groupBox = QGroupBox(self.paramTool)
         self.groupBox.setObjectName(u"groupBox")
-        self.horizontalLayout_4 = QHBoxLayout(self.groupBox)
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.gridLayout_export = QGridLayout(self.groupBox)
+        self.gridLayout_export.setObjectName(u"gridLayout_export")
         self.exportSpectrumPushButton = QPushButton(self.groupBox)
         self.exportSpectrumPushButton.setObjectName(u"exportSpectrumPushButton")
 
-        self.horizontalLayout_4.addWidget(self.exportSpectrumPushButton)
+        self.gridLayout_export.addWidget(self.exportSpectrumPushButton, 0, 0, 1, 1)
 
         self.exportDenoisedSpectrumPushButton = QPushButton(self.groupBox)
         self.exportDenoisedSpectrumPushButton.setObjectName(u"exportDenoisedSpectrumPushButton")
 
-        self.horizontalLayout_4.addWidget(self.exportDenoisedSpectrumPushButton)
+        self.gridLayout_export.addWidget(self.exportDenoisedSpectrumPushButton, 0, 1, 1, 1)
 
         self.exportNoisePeaksPushButton = QPushButton(self.groupBox)
         self.exportNoisePeaksPushButton.setObjectName(u"exportNoisePeaksPushButton")
 
-        self.horizontalLayout_4.addWidget(self.exportNoisePeaksPushButton)
+        self.gridLayout_export.addWidget(self.exportNoisePeaksPushButton, 1, 0, 1, 1)
+
+        self.exportNoiseLODPushButton = QPushButton(self.groupBox)
+        self.exportNoiseLODPushButton.setObjectName(u"exportNoiseLODPushButton")
+
+        self.gridLayout_export.addWidget(self.exportNoiseLODPushButton, 1, 1, 1, 1)
 
 
         self.verticalLayout_3.addWidget(self.groupBox)
@@ -316,6 +314,9 @@ class Ui_Form(object):
         self.label.setText(QCoreApplication.translate("Form", u"quantile", None))
         self.label_2.setText(QCoreApplication.translate("Form", u"N sigma", None))
         self.sizeDependentLabel.setText(QCoreApplication.translate("Form", u"size-dependent", None))
+#if QT_CONFIG(tooltip)
+        self.sizeDependentCheckBox.setToolTip(QCoreApplication.translate("Form", u"Fit the global noise baseline as a line in m/z (mass-dependent) instead of a flat level.", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_2.setTitle(QCoreApplication.translate("Form", u"Noise for high-intensity peaks", None))
         ___qtablewidgetitem = self.tableWidget.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("Form", u"formula", None))
@@ -331,17 +332,11 @@ class Ui_Form(object):
 #endif // QT_CONFIG(shortcut)
         self.toolBox.setItemText(self.toolBox.indexOf(self.noiseTool), QCoreApplication.translate("Form", u"Noise inputs", None))
         ___qtablewidgetitem3 = self.paramTableWidget.horizontalHeaderItem(0)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("Form", u"enabled", None))
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("Form", u"type", None))
         ___qtablewidgetitem4 = self.paramTableWidget.horizontalHeaderItem(1)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("Form", u"type", None))
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("Form", u"noise", None))
         ___qtablewidgetitem5 = self.paramTableWidget.horizontalHeaderItem(2)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("Form", u"noise", None))
-        ___qtablewidgetitem6 = self.paramTableWidget.horizontalHeaderItem(3)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("Form", u"LOD", None))
-        self.recalculateNoisePushButton.setText(QCoreApplication.translate("Form", u"&Recalulate noise", None))
-#if QT_CONFIG(shortcut)
-        self.recalculateNoisePushButton.setShortcut(QCoreApplication.translate("Form", u"Alt+R", None))
-#endif // QT_CONFIG(shortcut)
+        ___qtablewidgetitem5.setText(QCoreApplication.translate("Form", u"LOD", None))
         self.groupBox.setTitle(QCoreApplication.translate("Form", u"Export", None))
         self.exportSpectrumPushButton.setText(QCoreApplication.translate("Form", u"Spectrum", None))
 #if QT_CONFIG(shortcut)
@@ -355,9 +350,16 @@ class Ui_Form(object):
 #if QT_CONFIG(shortcut)
         self.exportNoisePeaksPushButton.setShortcut(QCoreApplication.translate("Form", u"Ctrl+Alt+N", None))
 #endif // QT_CONFIG(shortcut)
+        self.exportNoiseLODPushButton.setText(QCoreApplication.translate("Form", u"Noise & LOD", None))
+#if QT_CONFIG(shortcut)
+        self.exportNoiseLODPushButton.setShortcut(QCoreApplication.translate("Form", u"Ctrl+Alt+L", None))
+#endif // QT_CONFIG(shortcut)
         self.toolBox.setItemText(self.toolBox.indexOf(self.paramTool), QCoreApplication.translate("Form", u"Noise results", None))
         self.substractCheckBox.setText(QCoreApplication.translate("Form", u"Subtract noise level from peaks", None))
         self.dependentCheckBox.setText(QCoreApplication.translate("Form", u"Spectrum-dependent params", None))
+#if QT_CONFIG(tooltip)
+        self.dependentCheckBox.setToolTip(QCoreApplication.translate("Form", u"Fit separate noise parameters for each calibrated spectrum. Untick to reuse the Noise tab's parameters for every spectrum.", None))
+#endif // QT_CONFIG(tooltip)
         self.denoisePushButton.setText(QCoreApplication.translate("Form", u"denoise", None))
 #if QT_CONFIG(shortcut)
         self.denoisePushButton.setShortcut(QCoreApplication.translate("Form", u"Return", None))

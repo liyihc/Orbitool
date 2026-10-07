@@ -16,6 +16,11 @@ individually, because each really needs its own calibration.
 - **Calibrate and continue** (`Return`) advances to [Peak Fit](peak-fit.md).
 - **Skip calibration** (`Alt + P`) advances without calibrating.
 
+Calibrating also runs the denoise. Unless denoise is skipped, this records each
+spectrum's noise/LOD table; the [Spectra List](dockers.md) exports those tables
+later. Whether each spectrum gets its own fitted parameters or shares the
+[Noise tab](noise.md)'s is decided there by **Spectrum-dependent params**.
+
 ## Segments
 
 You can calibrate a spectrum separately in mass ranges — for example two ends,

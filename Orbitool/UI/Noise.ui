@@ -117,9 +117,13 @@
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
-              <widget class="QCheckBox" name="sizeDependentCheckBox"/>
-             </item>
+              <item row="3" column="1">
+               <widget class="QCheckBox" name="sizeDependentCheckBox">
+                <property name="toolTip">
+                 <string>Fit the global noise baseline as a line in m/z (mass-dependent) instead of a flat level.</string>
+                </property>
+               </widget>
+              </item>
             </layout>
            </item>
            <item>
@@ -232,19 +236,14 @@
              <property name="horizontalScrollMode">
               <enum>QAbstractItemView::ScrollPerPixel</enum>
              </property>
-             <attribute name="horizontalHeaderStretchLastSection">
-              <bool>true</bool>
-             </attribute>
-             <column>
-              <property name="text">
-               <string>enabled</string>
-              </property>
-             </column>
-             <column>
-              <property name="text">
-               <string>type</string>
-              </property>
-             </column>
+              <attribute name="horizontalHeaderStretchLastSection">
+               <bool>true</bool>
+              </attribute>
+              <column>
+               <property name="text">
+                <string>type</string>
+               </property>
+              </column>
              <column>
               <property name="text">
                <string>noise</string>
@@ -255,16 +254,6 @@
                <string>LOD</string>
               </property>
              </column>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="recalculateNoisePushButton">
-             <property name="text">
-              <string>&amp;Recalulate noise</string>
-             </property>
-             <property name="shortcut">
-              <string>Alt+R</string>
-             </property>
             </widget>
            </item>
            <item>
@@ -285,8 +274,8 @@
              <property name="title">
               <string>Export</string>
              </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_export">
+              <item row="0" column="0">
                <widget class="QPushButton" name="exportSpectrumPushButton">
                 <property name="text">
                  <string>Spectrum</string>
@@ -296,7 +285,7 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="0" column="1">
                <widget class="QPushButton" name="exportDenoisedSpectrumPushButton">
                 <property name="text">
                  <string>Denoised spectrum</string>
@@ -306,13 +295,23 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="1" column="0">
                <widget class="QPushButton" name="exportNoisePeaksPushButton">
                 <property name="text">
                  <string>Noise peaks</string>
                 </property>
                 <property name="shortcut">
                  <string>Ctrl+Alt+N</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QPushButton" name="exportNoiseLODPushButton">
+                <property name="text">
+                 <string>Noise &amp; LOD</string>
+                </property>
+                <property name="shortcut">
+                 <string>Ctrl+Alt+L</string>
                 </property>
                </widget>
               </item>
@@ -331,14 +330,17 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="dependentCheckBox">
-         <property name="text">
-          <string>Spectrum-dependent params</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
+         <widget class="QCheckBox" name="dependentCheckBox">
+          <property name="text">
+           <string>Spectrum-dependent params</string>
+          </property>
+          <property name="toolTip">
+           <string>Fit separate noise parameters for each calibrated spectrum. Untick to reuse the Noise tab's parameters for every spectrum.</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_3">

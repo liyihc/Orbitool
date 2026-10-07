@@ -11,8 +11,9 @@ from Orbitool.models.file import FileSpectrumInfo
 from .. import setting
 from . import SpectraListUi, utils
 from .manager import Manager, ui_task, background, progress
-from .utils import (TableUtils, get_tablewidget_selected_row, openfolder, set_header_sizes,
-                    showInfo)
+from .utils import (TableUtils, get_tablewidget_selected_row, openfolder,
+                    set_header_sizes, showInfo, unique_export_subfolder,
+                    write_noise_lod_csv)
 
 FILE_TAB = 0
 CALIBRATE_TAB = 1
@@ -42,6 +43,8 @@ class Widget(QtWidgets.QWidget):
         ui.exportSelectPushButton.clicked.connect(
             lambda: self.export("select"))
         ui.exportAllPushButton.clicked.connect(lambda: self.export("all"))
+        ui.exportNoiseLODPushButton.clicked.connect(self.exportNoiseLOD)
+        self._update_export_noise_lod_enabled()
 
     def restore(self):
         ui = self.ui
@@ -76,6 +79,7 @@ class Widget(QtWidgets.QWidget):
         ui.tableWidget.verticalScrollBar().setSliderPosition(
             self.comboBox_position.get(current, 0))
         self.former_index = current
+        self._update_export_noise_lod_enabled()
 
     @property
     def info(self):
@@ -174,5 +178,52 @@ class Widget(QtWidgets.QWidget):
                     writer = csv.writer(f)
                     writer.writerow(['mz', 'intensity'])
                     writer.writerows(zip(spectrum.mz, spectrum.intensity))
+            os.startfile(folder)
+        await background(func)
+
+    def _update_export_noise_lod_enabled(self):
+        """The per-spectrum noise/LOD export only makes sense on the Calibrate
+        tab and only once calibration has recorded the tables."""
+        button = self.ui.exportNoiseLODPushButton
+        on_calibrate = self.ui.comboBox.currentData() == CALIBRATE_TAB
+        has_data = bool(
+            self.manager.workspace.info.calibration_tab.noise_lod)
+        button.setEnabled(on_calibrate and has_data)
+        if on_calibrate and not has_data:
+            button.setToolTip(
+                "Calibrate with denoise (not skip) to record per-spectrum "
+                "noise/LOD, then re-open this workspace.")
+        elif not on_calibrate:
+            button.setToolTip(
+                "Switch to the Calibrate tab to export per-spectrum noise/LOD.")
+        else:
+            button.setToolTip("")
+
+    @ui_task
+    async def exportNoiseLOD(self):
+        info = self.manager.workspace.info.calibration_tab
+        if not info.noise_lod:
+            showInfo("No per-spectrum noise/LOD yet; calibrate first")
+            return
+
+        ret, folder = openfolder("choose a folder to place noise/LOD")
+        if not ret:
+            return
+
+        folder = unique_export_subfolder(Path(folder), "exported-noise-LOD")
+
+        grouped = {}
+        for row in info.noise_lod:
+            grouped.setdefault(row.spectrum_index, []).append(row)
+
+        spectra = self.manager.workspace.data.calibrated_spectra
+
+        def func():
+            for index, spectrum in enumerate(progress.tqdm(spectra)):
+                filename = (f"noise_LOD {setting.format_export_time(spectrum.start_time)}"
+                            f"-{setting.format_export_time(spectrum.end_time)}")
+                rows = [(row.formula, row.mass, row.noise, row.LOD)
+                        for row in grouped.get(index, [])]
+                write_noise_lod_csv(folder / f"{filename}.csv", rows)
             os.startfile(folder)
         await background(func)
