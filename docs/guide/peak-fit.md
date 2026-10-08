@@ -5,7 +5,9 @@ Fit peaks and manage the fitted peaks shown in the [Peak List](dockers.md).
 ![Peak fit tab](img/peak-fit-tab.png)
 
 - **show selected spectrum** (`Alt + O`) plots the spectrum for the selected
-  peak.
+  peak. Requires a denoised and calibrated spectrum, and a peak shape function
+  set in the [Peak Shape tab](peak-shape.md); otherwise Orbitool shows a prompt
+  instead of plotting.
 - **Peaks Filter** hides peaks that don't match a condition. Filters overlay
   (a peak must pass all active ones). Clear them with **clear filter**
   (`Alt + C`). Conditions include:

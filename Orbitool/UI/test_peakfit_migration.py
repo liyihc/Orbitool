@@ -43,7 +43,7 @@ _RES = 148889.02590153966
 
 @pytest.fixture(scope="module")
 def env(request):
-    return MigrationEnv().build(request)
+    return MigrationEnv().build(request, extra_dialog_modules=(peakfit_module,))
 
 
 @pytest.fixture(autouse=True)
@@ -64,6 +64,7 @@ def reset_state(env):
     info.residual_mz = empty
     info.residual_intensity = empty
     window.manager.workspace.info.peak_shape_tab.func = None
+    window.manager.workspace.data.raw_spectra.clear()
     window.manager.workspace.data.calibrated_spectra.clear()
 
 
@@ -73,6 +74,13 @@ def _spectrum():
     intensity = np.exp(-0.5 * ((mz - 100.0) / sigma) ** 2)
     return Spectrum(
         mz=mz, intensity=intensity, path="none:",
+        start_time=_START, end_time=_START + timedelta(minutes=1))
+
+
+def _empty_spectrum():
+    empty = np.empty(0, float)
+    return Spectrum(
+        mz=empty, intensity=empty, path="none:",
         start_time=_START, end_time=_START + timedelta(minutes=1))
 
 
@@ -333,6 +341,36 @@ def test_peakfit_show_select_multiprocess_pipeline(env):
     assert len(info.peaks) >= 1
     assert len(info.shown_mz) == len(info.shown_intensity)
     assert len(info.raw_split_num) == len(info.original_indexes)
+
+
+def test_peakfit_show_select_without_spectra_shows_dialog(env):
+    env.window.peakFitTab.showSelect()
+    assert env.dialogs != []
+
+
+def test_peakfit_show_select_without_calibration_shows_dialog(env):
+    window = env.window
+    window.manager.workspace.data.raw_spectra.append(_spectrum())
+    window.peakFitTab.showSelect()
+    assert env.dialogs != []
+
+
+def test_peakfit_show_select_without_peak_shape_func_shows_dialog(env):
+    window = env.window
+    window.manager.workspace.data.calibrated_spectra.append(_spectrum())
+    window.peakFitTab.showSelect()
+    assert env.dialogs != []
+
+
+def test_peakfit_show_select_without_peaks_shows_dialog(env):
+    window = env.window
+    workspace = window.manager.workspace
+    workspace.data.calibrated_spectra.append(_empty_spectrum())
+    window.manager.getters.spectra_list_selected_index.connect(lambda: 0)
+    workspace.info.peak_shape_tab.func = NormalDistributionFunc(
+        peak_fit_sigma=_SIGMA, peak_fit_res=_RES)
+    window.peakFitTab.showSelect()
+    assert env.dialogs != []
 
 
 # --------------------------------------------------------------------------

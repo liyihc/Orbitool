@@ -20,6 +20,7 @@ from Orbitool.utils import binary_search
 from . import PeakFitUi
 from .component import Plot
 from .manager import Manager, MultiProcess, ui_task, background, progress
+from .utils import showInfo
 
 
 class FitMethod(str, Enum):
@@ -133,6 +134,16 @@ class Widget(QtWidgets.QWidget):
     @ui_task
     async def showSelect(self):
         workspace = self.manager.workspace
+        if len(workspace.data.calibrated_spectra) == 0:
+            if len(workspace.data.raw_spectra) == 0:
+                showInfo("please denoise a spectrum first")
+            else:
+                showInfo("please calibrate the spectrum first")
+            return
+        if workspace.info.peak_shape_tab.func is None:
+            showInfo("please set the peak shape function first")
+            return
+
         selected_index = self.manager.getters.spectra_list_selected_index.get()
 
         def read():
@@ -143,6 +154,9 @@ class Widget(QtWidgets.QWidget):
 
         spectrum, raw_peaks = await background(read, "read spectrum")
         raw_peaks: List[Peak]
+        if len(raw_peaks) == 0:
+            showInfo("the selected spectrum has no peaks")
+            return
 
         setting.set_global_val("multi-process-tmp-times", 20)
         raw_split_num, original_indexes, peaks = await background(SplitPeaks(raw_peaks, func_kwargs={
