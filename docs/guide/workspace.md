@@ -8,8 +8,10 @@ extension. The **Workspace** menu has:
 - **Load**, **Save**, **Save as**
 - **Load config from workspace**, **Save config to workspace**
 
-Workspaces are versioned. Loading a workspace written by an older Orbitool may
-run a one-time migration; a workspace newer than your build will refuse to open.
+Workspaces are versioned. Loading a workspace written by an older Orbitool first
+asks you to save an upgraded copy to a new file — your original is left untouched
+— and then opens that copy. A workspace written by a newer Orbitool than your
+build cannot be opened and tells you to update Orbitool.
 
 ### Saving large files
 

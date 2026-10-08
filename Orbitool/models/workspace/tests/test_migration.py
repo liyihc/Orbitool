@@ -121,6 +121,14 @@ def _assert_workspace(workspace: WorkSpace, era: str):
     assert len(info.peak_shape_tab.peaks_manager.peaks) == 1
 
 
+def test_too_new_is_the_mirror_of_need_update():
+    assert updater.too_new("99.0.0")
+    assert not updater.too_new("2.6.0")
+    assert not updater.too_new("1.0.0")
+    assert not updater.need_update("99.0.0")
+    assert updater.need_update("1.0.0")
+
+
 @pytest.mark.parametrize("era", legacy.ERAS)
 def test_migrate_legacy_workspace(tmp_path, era):
     path = tmp_path / "legacy.Orbitool"

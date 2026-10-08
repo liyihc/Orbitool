@@ -29,6 +29,11 @@ def need_update(version: str):
     return version < start_versions[-1][0]
 
 
+def too_new(version: str):
+    version = Version(version)
+    return version > start_versions[-1][0]
+
+
 def get_version(path: str):
     with h5py.File(path, 'r') as f:
         return f["info"].attrs["version"]

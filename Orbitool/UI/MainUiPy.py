@@ -185,8 +185,26 @@ class Window(QtWidgets.QMainWindow):
 
     def _load_workspace(self, f: str):
         version = updater.get_version(f)
+        if updater.too_new(version):
+            UiUtils.showInfo(
+                f"This workspace was created with a newer version of Orbitool"
+                f" ({version}) than this build ({VERSION}).\n"
+                "Please update Orbitool to open it.",
+                "workspace too new")
+            return
         if updater.need_update(version):
-            ret, n = UiUtils.savefile("Update workspace and save as a new file", "Orbitool Workspace file(*.Orbitool)")
+            if not UiUtils.confirm(
+                    f"This workspace was created with Orbitool {version}.\n"
+                    f"To open it here it must be upgraded to {VERSION} and "
+                    "saved as a new file.\n"
+                    "Your original file will not be changed.",
+                    "workspace from an older version",
+                    accept="Upgrade and Save…", reject="Cancel"):
+                return
+            ret, n = UiUtils.savefile(
+                "Update workspace and save as a new file",
+                "Orbitool Workspace file(*.Orbitool)",
+                prefer_name=Path(f).name)
             if not ret:
                 return
             shutil.copy(f, n)
