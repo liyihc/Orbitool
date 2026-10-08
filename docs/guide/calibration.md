@@ -8,7 +8,7 @@ individually, because each really needs its own calibration.
 - **Calc calibrate info** (`Alt + C`) computes the calibration for the current
   file. The **tolerance(ppm)** here is used both to average spectra and to cut
   the spectrum at segment separators.
-- **degree of freedom** and **use best N ions** control the fit; **intensity
+- **polynomial degree** and **use best N ions** control the fit; **intensity
   filter** excludes weak ions.
 - Add ions to **Current Segment Ions** with `+` (formats like
   `HNO3O3-`, `C6H3O2NNO3`), remove with `-`, or **Import** / **Export** the
@@ -24,7 +24,7 @@ later. Whether each spectrum gets its own fitted parameters or shares the
 ## Segments
 
 You can calibrate a spectrum separately in mass ranges — for example two ends,
-50–300 and 300–750. Each segment may use a different degree of freedom and
+ 50–300 and 300–750. Each segment may use a different polynomial degree and
 tolerance. **separate** adds a segment; select multiple adjacent segments and
 **Merge** from the context menu to combine them.
 

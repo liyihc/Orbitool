@@ -393,7 +393,7 @@ class Ui_Form(object):
 #endif // QT_CONFIG(shortcut)
         self.ionsImportToolButton.setText(QCoreApplication.translate("Form", u"Import", None))
         self.ionsExportToolButton.setText(QCoreApplication.translate("Form", u"Export", None))
-        self.degreeLabel.setText(QCoreApplication.translate("Form", u"degree of freedom", None))
+        self.degreeLabel.setText(QCoreApplication.translate("Form", u"polynomial degree", None))
         self.nIonsLabel.setText(QCoreApplication.translate("Form", u"use best N ions", None))
         self.filterLabel.setText(QCoreApplication.translate("Form", u"intensity filter", None))
 #if QT_CONFIG(tooltip)
