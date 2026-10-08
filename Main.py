@@ -22,12 +22,14 @@ try:
         parser.add_argument("--no_multiprocess", action="store_true")
         parser.add_argument("--to_step")
 
+        from Orbitool import logger, VERSION
         from Orbitool.config import setting, multi_cores
         setting.load_setting()
         setting.general.multi_cores = max(
             1, min(setting.general.multi_cores, multi_cores - 1))
 
         setting.save_setting()
+        logger.i("Main", f"start() version={VERSION}")
         args = parser.parse_args()
         if args.debug:
             setting.debug.thread_block_gui = True

@@ -50,6 +50,7 @@ generation, and packaging. Read it before running any of them.
   allowed
 - Writing tab background operations (`ui_task` / `background`, mode words, error and
   abort contracts): see `docs/dev/ui-tasks.md`
+- Logging user actions (level, TAG, what to log): see `docs/dev/logging.md`
 
 ## Agent skills
 
