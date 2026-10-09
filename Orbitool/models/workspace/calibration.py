@@ -70,7 +70,7 @@ class CalibratorInfo(BaseInfo):
     # calibrated before this was recorded, and when denoise was skipped.
     noise_lod: List[CalibratedNoiseLOD] = []
 
-    def add_segment(self, separator: float):
+    def add_segment(self, separator: float) -> int:
         pos = 0
         segments = self.calibrate_info_segments
         while len(segments) > pos and segments[pos].end_point < separator:
@@ -82,6 +82,7 @@ class CalibratorInfo(BaseInfo):
         new_segment.end_point = separator
         self.calibrate_info_segments.insert(
             pos, new_segment)
+        return pos
 
     def merge_segment(self, begin: int, end: int):
         segments = self.calibrate_info_segments[begin:end]

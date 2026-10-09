@@ -9,7 +9,7 @@ from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple, Union
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from Orbitool import setting
+from Orbitool import logger, setting
 from Orbitool.base.disk_structure import DiskListDirectView
 from Orbitool.models import peakfit, spectrum as spectrum_func
 from Orbitool.models.spectrum import Spectrum, SpectrumInfo
@@ -134,7 +134,12 @@ class Widget(QtWidgets.QWidget):
         separator = ui.separatorDoubleSpinBox.value()
         formula_info = self.manager.workspace.info.formula_docker
         assert formula_info.mz_min < separator < formula_info.mz_max, "please check mz range in the Formula calculator"
-        self.info.add_segment(separator)
+        self.saveCurrentSegment()
+        pos = self.info.add_segment(separator)
+        if pos <= self.info.current_segment_index:
+            self.info.current_segment_index += 1
+        logger.i("CalibrationUiPy",
+                 f"addSegment() separator={separator} pos={pos}")
         self.showSegments()
         self.showCurrentSegment()
 
@@ -156,6 +161,7 @@ class Widget(QtWidgets.QWidget):
 
     @ui_task
     async def mergeSegment(self, indexes: List[int]):
+        self.saveCurrentSegment()
         ma = max(indexes)
         mi = min(indexes)
         assert ma - mi == len(indexes) - \
@@ -168,6 +174,7 @@ class Widget(QtWidgets.QWidget):
             else:
                 info.current_segment_index -= ma - mi
 
+        logger.i("CalibrationUiPy", f"mergeSegment() indexes={indexes}")
         self.showSegments()
         self.showCurrentSegment()
 
