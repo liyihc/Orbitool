@@ -31,7 +31,10 @@ tolerance. **separate** adds a segment; select multiple adjacent segments and
 ![Calibration segments](img/calibration-segments.png)
 
 **Show details** displays the separately calibrated spectrum; the **Table**
-sub-tab shows the raw numbers.
+sub-tab shows the raw numbers. Its **Export** button writes the table to a CSV:
+one row per file, sorted by start time, with a `ppm` and a `used` (1/0) column
+for each ion. Export prompts you to compute the calibration info first when
+that has not been done.
 
 ![Calibration table](img/calibration-table.png)
 

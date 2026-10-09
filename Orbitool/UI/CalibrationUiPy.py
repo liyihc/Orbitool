@@ -1,3 +1,4 @@
+import csv
 import math
 from enum import Enum
 from functools import partial
@@ -65,6 +66,8 @@ class Widget(QtWidgets.QWidget):
 
         ui.calcInfoPushButton.clicked.connect(self.calcInfo)
         ui.showDetailsPushButton.clicked.connect(self.showDetail)
+        ui.exportCalibrationTablePushButton.clicked.connect(
+            self.exportCalibrationTable)
         ui.finishPushButton.clicked.connect(
             lambda: self.calibrate(skip=False))
         ui.skipPushButton.clicked.connect(lambda: self.calibrate(skip=True))
@@ -215,6 +218,44 @@ class Widget(QtWidgets.QWidget):
         l = ["Ion"]
         l.extend(ion.shown_text for ion in self.info.ions)
         f.write_text("\n".join(l))
+
+    @ui_task
+    async def exportCalibrationTable(self):
+        info = self.info
+        if not info.calibrator_segments:
+            showInfo("please calculate calibration info first")
+            return
+        ret, f = savefile("Save calibration table", "*.csv",
+                          prefer_name="calibration_table.csv")
+        if not ret:
+            return
+        f = Path(f)
+
+        path_ion_infos = info.path_ion_infos
+        path_times = [(path, info.path_times[path])
+                      for path in path_ion_infos.keys()]
+        path_times.sort(key=lambda t: t[1])
+        last_ions = info.last_ions
+
+        def func():
+            with open(f, "w", newline="") as fp:
+                writer = csv.writer(fp)
+                header = ["Time"]
+                for ion in last_ions:
+                    header.append(f"{ion.shown_text} ppm")
+                    header.append(f"{ion.shown_text} used")
+                writer.writerow(header)
+                for path, time in path_times:
+                    ion_infos = path_ion_infos[path]
+                    row = [str(time.replace(microsecond=0))[:-3]]
+                    for ion, used in info.yield_ion_used(path):
+                        rtol = ion_infos[ion.formula].rtol
+                        row.append("" if math.isnan(rtol)
+                                   else format(rtol * 1e6, ".5f"))
+                        row.append("1" if used else "0")
+                    writer.writerow(row)
+
+        await background(func, "export calibration table")
 
     @ui_task(mode="light")
     async def tableDragEnterEvent(self, event: QtGui.QDragEnterEvent):

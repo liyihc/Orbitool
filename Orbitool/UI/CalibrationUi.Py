@@ -315,6 +315,11 @@ class Ui_Form(object):
 
         self.verticalLayout_3.addWidget(self.caliInfoTableWidget)
 
+        self.exportCalibrationTablePushButton = QPushButton(self.tableTabWidgetPage)
+        self.exportCalibrationTablePushButton.setObjectName(u"exportCalibrationTablePushButton")
+
+        self.verticalLayout_3.addWidget(self.exportCalibrationTablePushButton)
+
         self.tabWidget.addTab(self.tableTabWidgetPage, "")
         self.calibrationSplitter.addWidget(self.tabWidget)
 
@@ -400,6 +405,7 @@ class Ui_Form(object):
 #endif // QT_CONFIG(tooltip)
         self.label_3.setText(QCoreApplication.translate("Form", u"tolerance(ppm)", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.figureTabWidgetPage), QCoreApplication.translate("Form", u"Figure", None))
+        self.exportCalibrationTablePushButton.setText(QCoreApplication.translate("Form", u"Export", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tableTabWidgetPage), QCoreApplication.translate("Form", u"Table", None))
 #if QT_CONFIG(tooltip)
         self.calcInfoPushButton.setToolTip(QCoreApplication.translate("Form", u"Alt+C", None))
