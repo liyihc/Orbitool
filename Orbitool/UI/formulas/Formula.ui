@@ -113,6 +113,9 @@
              </item>
              <item row="1" column="0">
               <widget class="QLabel" name="tolerancePpmLabel">
+               <property name="toolTip">
+                <string>During formula search, only compositions whose mass falls within ±this-ppm of the target mass are accepted.</string>
+               </property>
                <property name="text">
                 <string>tolerance(ppm)</string>
                </property>

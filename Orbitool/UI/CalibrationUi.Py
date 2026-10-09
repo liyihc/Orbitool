@@ -369,8 +369,7 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.label.setText(QCoreApplication.translate("Form", u"Segments", None))
 #if QT_CONFIG(tooltip)
-        self.rtolLabel.setToolTip(QCoreApplication.translate("Form", u"used to average spectra\n"
-"used to cut spectrum by separators", None))
+        self.rtolLabel.setToolTip(QCoreApplication.translate("Form", u"Around each calibration ion, a \u00b1this-ppm window is cut from the spectrum and its peak is fitted.", None))
 #endif // QT_CONFIG(tooltip)
         self.rtolLabel.setText(QCoreApplication.translate("Form", u"tolerance(ppm)", None))
 #if QT_CONFIG(tooltip)
@@ -397,7 +396,7 @@ class Ui_Form(object):
         self.nIonsLabel.setText(QCoreApplication.translate("Form", u"use best N ions", None))
         self.filterLabel.setText(QCoreApplication.translate("Form", u"intensity filter", None))
 #if QT_CONFIG(tooltip)
-        self.label_3.setToolTip(QCoreApplication.translate("Form", u"used to find peaks within this rtol around ions", None))
+        self.label_3.setToolTip(QCoreApplication.translate("Form", u"A fitted peak is accepted as its ion's peak when its position is within this \u00b1ppm.", None))
 #endif // QT_CONFIG(tooltip)
         self.label_3.setText(QCoreApplication.translate("Form", u"tolerance(ppm)", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.figureTabWidgetPage), QCoreApplication.translate("Form", u"Figure", None))

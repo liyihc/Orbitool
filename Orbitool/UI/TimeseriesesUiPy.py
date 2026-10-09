@@ -87,6 +87,7 @@ class Widget(QtWidgets.QWidget):
         ui = self.ui
 
         series: List[TimeSeries] = []
+        # ppm tooltip: see Timeserieses.ui (label_22)
         rtol = ui.rtolDoubleSpinBox.value() * 1e-6
 
         if ui.mzRadioButton.isChecked():

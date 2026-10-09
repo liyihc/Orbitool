@@ -271,6 +271,7 @@ class Widget(QtWidgets.QWidget):
         time_range = (ui.startDateTimeEdit.dateTime().toPython(),
                       ui.endDateTimeEdit.dateTime().toPython())
 
+        # ppm tooltip: see File.ui (rtolLabel)
         self.info.rtol = ui.rtolDoubleSpinBox.value() * 1e-6
 
         filters = self.info.getCastedUsedSpectrumFilters()

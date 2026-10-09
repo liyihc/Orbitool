@@ -200,6 +200,7 @@ class Widget(QtWidgets.QWidget):
         info.mz_min = ui.mzMinDoubleSpinBox.value()
         info.mz_max = ui.mzMaxDoubleSpinBox.value()
         info.charge = ui.chargeSpinBox.value()
+        # ppm tooltip: see Formula.ui (tolerancePpmLabel)
         info.calc_gen.rtol = ui.rtolDoubleSpinBox.value() * 1e-6
         info.calc_gen.global_limit = ui.globalLimitSpinBox.value()
         info.calc_gen.nitrogen_rule = ui.nitrogenRuleCheckBox.isChecked()

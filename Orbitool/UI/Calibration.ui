@@ -52,8 +52,7 @@
          <item>
           <widget class="QLabel" name="rtolLabel">
            <property name="toolTip">
-            <string>used to average spectra
-used to cut spectrum by separators</string>
+            <string>Around each calibration ion, a ±this-ppm window is cut from the spectrum and its peak is fitted.</string>
            </property>
            <property name="text">
             <string>tolerance(ppm)</string>
@@ -530,7 +529,7 @@ used to cut spectrum by separators</string>
          <item row="3" column="0">
           <widget class="QLabel" name="label_3">
            <property name="toolTip">
-            <string>used to find peaks within this rtol around ions</string>
+            <string>A fitted peak is accepted as its ion's peak when its position is within this ±ppm.</string>
            </property>
            <property name="text">
             <string>tolerance(ppm)</string>

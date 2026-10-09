@@ -484,7 +484,7 @@ class Ui_Form(object):
         self.delFilterToolButton.setShortcut(QCoreApplication.translate("Form", u"Del", None))
 #endif // QT_CONFIG(shortcut)
 #if QT_CONFIG(tooltip)
-        self.rtolLabel.setToolTip(QCoreApplication.translate("Form", u"tolerance(ppm)", None))
+        self.rtolLabel.setToolTip(QCoreApplication.translate("Form", u"When averaging scans, peaks from different scans are merged only if their m/z agree within this \u00b1ppm.", None))
 #endif // QT_CONFIG(tooltip)
         self.rtolLabel.setText(QCoreApplication.translate("Form", u"tolerance(ppm)", None))
         self.label_2.setText(QCoreApplication.translate("Form", u"Show spectra for", None))

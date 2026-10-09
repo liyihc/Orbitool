@@ -68,6 +68,7 @@ class Widget(QtWidgets.QWidget):
 
     @ui_task
     async def updateRtol(self):
+        # ppm tooltip: see MassList.ui (label)
         self.info.rtol = self.ui.doubleSpinBox.value() * 1e-6
 
     @ui_task

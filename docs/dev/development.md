@@ -79,6 +79,18 @@ To run the real-GUI suite:
 - A few generated files end in uppercase `.Py`; those imports only resolve on
   case-insensitive filesystems (Windows).
 
+## UI tooltips
+
+Explanatory tooltips describe **what the code actually does at run time** — the
+concrete effect on the data — not a restatement of the widget's label. For a
+mass-tolerance (ppm) box that means the operation it feeds (e.g. "a new mass joins
+an existing mass-list entry if within this ±ppm"), never just "tolerance(ppm)".
+
+Tooltip text lives in the `.ui` source (`toolTip` property), so regeneration keeps
+it. The hand-written `*UiPy.py` that reads the value carries a one-line pointer,
+`# ppm tooltip: see <X.ui> (<widget>)`, so editing the logic surfaces the tooltip
+that must change with it.
+
 ## UI structure
 
 The main window is `MainUiPy.Window` (hand-written) over the generated

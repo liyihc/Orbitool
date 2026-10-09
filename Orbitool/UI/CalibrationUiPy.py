@@ -122,6 +122,7 @@ class Widget(QtWidgets.QWidget):
         seg.intensity_filter = ui.filterSpinBox.value()
         seg.degree = ui.degreeSpinBox.value()
         seg.n_ions = ui.nIonsSpinBox.value()
+        # ppm tooltip: see Calibration.ui (label_3)
         seg.rtol = ui.segmentRtolDoubleSpinBox.value() * 1e-6
 
     @ui_task
@@ -252,6 +253,7 @@ class Widget(QtWidgets.QWidget):
 
         self.saveCurrentSegment()
 
+        # ppm tooltip: see Calibration.ui (rtolLabel)
         rtol = self.ui.rtolDoubleSpinBox.value() * 1e-6
         if workspace.info.noise_tab.to_be_calibrate or abs(info.rtol / rtol - 1) > 1e-6:
             formulas = [ion.formula for ion in info.ions]

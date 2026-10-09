@@ -489,6 +489,7 @@ class Widget(QtWidgets.QWidget):
         step_mi = ui.stepMinSpinBox.value()
         step_ma = ui.stepMaxSpinBox.value()
         mass = ui.stepAccordToMassCheckBox.isChecked()
+        # ppm tooltip: see PeakFit.ui (label_14)
         rtol = ui.stepRtolDoubleSpinBox.value() * 1e-6
 
         info = self.info

@@ -745,7 +745,7 @@
          <item>
           <widget class="QLabel" name="rtolLabel">
            <property name="toolTip">
-            <string>tolerance(ppm)</string>
+            <string>When averaging scans, peaks from different scans are merged only if their m/z agree within this ±ppm.</string>
            </property>
            <property name="text">
             <string>tolerance(ppm)</string>
