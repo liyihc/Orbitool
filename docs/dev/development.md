@@ -110,6 +110,13 @@ workflow tabs; the side panels (Spectra List, Peak List, Mass List) are
     (PyInstaller 6 layout), with no launcher `.bat`. Settings and logs live next to
     the exe, outside `_internal`: settings save to `setting.json` via
     `Orbitool/config.py`, paths resolved in `paths.py`.
+  - The bundle is pruned to what the UI can actually reach — unused Qt files,
+    Pillow codecs, matplotlib sample data and dev-only packages that hooks
+    over-collect are dropped in `Main.spec`. That spec is the single source for
+    the drop lists and the reason each entry exists. scipy subpackages are
+    deliberately kept: they are imported from C extensions, so excluding them
+    crashes the app. See
+    [ADR 0002](../adr/0002-slim-release-build-by-config.md).
   - The pytest step is silent while tests pass; a failure prints the offending
     test's captured logs and traceback (see [Everyday](#everyday)). It ends with one
     verdict line: `pytest: OK (exit 0)`, or

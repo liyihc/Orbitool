@@ -90,7 +90,9 @@ uv run --group build python build.py
 
 `build.py` runs the stages listed in
 [development.md](development.md#packaging-a-release) and aborts with a non-zero
-exit code on the first failure.
+exit code on the first failure. The release bundle is trimmed to what the UI can
+reach; the drop lists and their rationale live in `Main.spec` (see
+[ADR 0002](../adr/0002-slim-release-build-by-config.md)).
 
 Note: `build.py` refuses to run if `jedi` is importable — build in the
 project venv, not an environment with IDE helper packages.

@@ -2,7 +2,6 @@ import csv
 import math
 import os
 from copy import copy
-from tkinter import W
 from typing import Generator, Iterable, List, Optional, Tuple, Union
 
 import matplotlib.ticker
