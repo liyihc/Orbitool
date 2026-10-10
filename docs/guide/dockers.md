@@ -40,12 +40,15 @@ Orbitool uses the mass list to fit peaks and calculate time series.
 - **group**, **plus**, **minus** — add or subtract a chemical group across the
   whole list.
 - **tolerance(ppm)**, **split formula**, **Remove selected**.
-- **Import, Compare and Merge** picks a CSV and previews it against the current
-  list in a window of three aligned columns — **current**, **import**, and
-  **merge** (the union). A row filled on both sides is a match; a row filled on
-  one side only is unique to that list. Commit with **use current** (change
-  nothing), **use Import** (replace the list with the CSV), or **use Merge**
-  (replace it with the union). The preview exports to CSV.
+- **Import, Compare and Merge** picks a **two-column** Mass List CSV (the shape
+  **Export** writes) and previews it against the current list in a window of
+  three aligned columns — **current**, **import**, and **merge** (the union). A
+  row filled on both sides is a match; a row filled on one side only is unique
+  to that list. Commit with **use current** (change nothing), **use Import**
+  (replace the list with the CSV), or **use Merge** (replace it with the union).
+  A file that is not a two-column Mass List CSV is refused with an error. The
+  preview itself **exports as a six-column report** — a deliverable, not a Mass
+  List, so it is not a valid input to Import.
 - **Export** the current list as a CSV in this shape:
 
   | mz | formulas |

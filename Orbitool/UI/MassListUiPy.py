@@ -131,10 +131,22 @@ class Widget(QtWidgets.QWidget):
         with open(f, "r") as file:
             reader = csv.reader(file)
             it = iter(reader)
-            next(it)
+            try:
+                header = next(it)
+            except StopIteration:
+                header = None
+            # a Mass List CSV is a two-column `position,formulas` table; anything
+            # wider (e.g. the six-column comparison report) is not one
+            if header is None or len(header) != 2:
+                raise ValueError(
+                    f'"{f}" is not a Mass List CSV: it must have a two-column'
+                    f' header (position, formulas), but has '
+                    f'{0 if header is None else len(header)} columns')
             for row in it:
+                if not row:
+                    continue
                 position = row[0]
-                formulas = row[1]
+                formulas = row[1] if len(row) > 1 else ""
                 formulas = [Formula(f)
                             for formula in formulas.split('/') if (f := formula.strip())]
                 item = MassListItem(position=position, formulas=formulas)

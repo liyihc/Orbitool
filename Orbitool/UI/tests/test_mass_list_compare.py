@@ -12,6 +12,7 @@ import pytest
 
 from ...models.formula import Formula
 from ...models.peakfit import MassListHelper, MassListItem
+from ..utils import test as uitest
 # debug_settings is an autouse fixture re-exported for pytest
 from .migration_harness import MigrationEnv, debug_settings  # noqa: F401
 
@@ -111,3 +112,39 @@ def test_export_writes_the_six_on_screen_columns(env, tmp_path, monkeypatch):
                        "merge_position", "merge_formulas"]
     assert rows[1] == ["100.0", "CH4", "", "", "100.0", "CH4"]
     assert rows[2] == ["", "", "200.0", "", "200.0", ""]
+
+
+# --------------------------------------------------------------------------
+# The import chooser reads only the two-column Mass List CSV; the six-column
+# comparison report is a deliverable, not a Mass List, and must be refused.
+# --------------------------------------------------------------------------
+
+def test_read_accepts_a_two_column_mass_list(env, tmp_path):
+    src = tmp_path / "masslist.csv"
+    src.write_text("position,formulas\n100.0,\n200.0,CH4\n")
+    items = env.window.masslist.read_masslist_from(str(src))
+    assert len(items) == 2
+
+
+def test_read_refuses_a_comparison_report(env, tmp_path):
+    src = tmp_path / "compare.csv"
+    src.write_text(
+        "current_position,current_formulas,import_position,import_formulas,"
+        "merge_position,merge_formulas\n100.0,,200.0,,100.0,\n")
+    with pytest.raises(ValueError):
+        env.window.masslist.read_masslist_from(str(src))
+
+
+def test_compare_mass_list_reports_a_non_mass_list_file(env, tmp_path):
+    src = tmp_path / "compare.csv"
+    src.write_text("a,b,c\n1,2,3\n")
+    env.window.manager.workspace.info.masslist_docker.masslist = [
+        MassListItem(position=100.0)]
+
+    env.reset()
+    uitest.input((True, str(src)))
+    env.window.masslist.compare_mass_list()
+
+    assert env.dialogs != []            # the uniform error dialog fired
+    assert _committed(env) == [100.0]   # and the Mass List is untouched
+

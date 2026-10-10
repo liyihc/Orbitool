@@ -35,10 +35,11 @@ could disagree with what "use Merge" actually commits.
   operating on a copy of the current list.
 - The commit buttons use the existing semantics: use current = no change; use
   Import = replace with the parsed CSV; use Merge = replace with the union.
-- Preview export is WYSIWYG: six columns
-  (`current_position, current_formulas, import_position, import_formulas,
-  merge_position, merge_formulas`), formulas joined by `/` to match the import
-  convention, empty cells left blank.
+- Preview export is a six-column report (`current_position, current_formulas,
+  import_position, import_formulas, merge_position, merge_formulas`), formulas
+  joined by `/`. It is a deliverable, **not a Mass List**, so it is deliberately
+  not importable: the Import reader accepts only a two-column Mass List CSV and
+  refuses anything wider with a clear error.
 
 ## Consequences
 
