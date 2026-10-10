@@ -13,10 +13,10 @@ files). It is aimed at atmospheric and environmental chemistry researchers.
 
 ## Get started
 
-Download and open `Orbitool.exe` from the
-[download page](https://orbitrap.catalyse.cnrs.fr/download-link/). If you have
-never used Orbitool or an online MS instrument for atmospheric work, follow the
-steps below.
+Download the Windows release from the
+[GitHub releases page](https://github.com/liyihc/Orbitool/releases/latest),
+unzip it, and open `Orbitool.exe`. If you have never used Orbitool or an online
+MS instrument for atmospheric work, follow the steps below.
 
 ![Drag and drop files](docs/guide/img/dragdrop-files.gif)
 
