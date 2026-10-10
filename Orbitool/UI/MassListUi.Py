@@ -127,22 +127,12 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.removePushButton)
 
-        self.horizontalLayout_13 = QHBoxLayout()
-        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
-        self.mergePushButton = QPushButton(Form)
-        self.mergePushButton.setObjectName(u"mergePushButton")
+        self.importCompareMergePushButton = QPushButton(Form)
+        self.importCompareMergePushButton.setObjectName(u"importCompareMergePushButton")
+        sizePolicy.setHeightForWidth(self.importCompareMergePushButton.sizePolicy().hasHeightForWidth())
+        self.importCompareMergePushButton.setSizePolicy(sizePolicy)
 
-        self.horizontalLayout_13.addWidget(self.mergePushButton)
-
-        self.importPushButton = QPushButton(Form)
-        self.importPushButton.setObjectName(u"importPushButton")
-        sizePolicy.setHeightForWidth(self.importPushButton.sizePolicy().hasHeightForWidth())
-        self.importPushButton.setSizePolicy(sizePolicy)
-
-        self.horizontalLayout_13.addWidget(self.importPushButton)
-
-
-        self.verticalLayout.addLayout(self.horizontalLayout_13)
+        self.verticalLayout.addWidget(self.importCompareMergePushButton)
 
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -178,12 +168,11 @@ class Ui_Form(object):
         self.groupPlusPushButton.setText(QCoreApplication.translate("Form", u"plus", None))
         self.groupMinusPushButton.setText(QCoreApplication.translate("Form", u"minus", None))
 #if QT_CONFIG(tooltip)
-        self.label.setToolTip(QCoreApplication.translate("Form", u"When adding, importing or merging masses, a new mass joins an existing mass-list entry if within this \u00b1ppm; otherwise a new entry is created.", None))
+        self.label.setToolTip(QCoreApplication.translate("Form", u"When adding, importing, merging or comparing masses, a new mass joins an existing mass-list entry if within this \u00b1ppm; otherwise a new entry is created.", None))
 #endif // QT_CONFIG(tooltip)
         self.label.setText(QCoreApplication.translate("Form", u"tolerance(ppm)", None))
         self.removePushButton.setText(QCoreApplication.translate("Form", u"Remove selected", None))
-        self.mergePushButton.setText(QCoreApplication.translate("Form", u"Merge", None))
-        self.importPushButton.setText(QCoreApplication.translate("Form", u"Import", None))
+        self.importCompareMergePushButton.setText(QCoreApplication.translate("Form", u"Import, Compare and Merge", None))
         self.splitFormulaCheckBox.setText(QCoreApplication.translate("Form", u"split formula", None))
         self.exportPushButton.setText(QCoreApplication.translate("Form", u"Export", None))
     # retranslateUi

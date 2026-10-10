@@ -28,6 +28,7 @@ from ..tests.migration_harness import MigrationEnv, debug_settings  # noqa: F401
 
 spectra_module = importlib.import_module("Orbitool.UI.SpectraListUiPy")
 massdefect_module = importlib.import_module("Orbitool.UI.MassDefectUiPy")
+masslist_module = importlib.import_module("Orbitool.UI.MassListUiPy")
 
 
 @pytest.fixture(scope="module")
@@ -202,17 +203,32 @@ def test_masslist_light_and_default_modes(env):
     assert env.dialogs == []
 
 
-def test_masslist_import_and_export_background(env, tmp_path):
+def test_masslist_compare_and_export_background(env, tmp_path, monkeypatch):
     masslist = env.window.masslist
 
     src = tmp_path / "in.csv"
-    src.write_text("position,formulas\n100.0,CH4\n")
+    src.write_text("position,formulas\n100.0,\n200.0,CH4\n")
+    captured = {}
+
+    class FakeDialog:
+        def __init__(self, info, rows, imported):
+            captured["rows"] = rows
+            captured["imported"] = imported
+
+        def exec(self):
+            captured["exec"] = True
+            return 0
+
+    monkeypatch.setattr(
+        masslist_module.MassListCompareUiPy, "Dialog", FakeDialog)
     env.reset()
     uitest.input((True, str(src)))
-    masslist.import_masslist()                  # worker background step
+    masslist.compare_mass_list()                # worker background step
     assert env.dialogs == []
     assert env.busy == [True, False]
-    assert len(masslist.info.masslist) == 1
+    assert captured["exec"] is True
+    assert len(captured["imported"]) == 2
+    assert len(captured["rows"]) == 2
 
     dst = tmp_path / "out.csv"
     env.reset()

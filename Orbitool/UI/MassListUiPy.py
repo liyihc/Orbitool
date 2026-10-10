@@ -4,9 +4,10 @@ from functools import partial
 
 from PySide6 import QtCore, QtWidgets
 
+from Orbitool import logger
 from Orbitool.models.peakfit import MassListItem, MassListHelper
 from Orbitool.models.formula import Formula
-from . import MassListUi
+from . import MassListUi, MassListCompareUiPy
 from .manager import Manager, ui_task, background
 from .utils import get_tablewidget_selected_row, openfile, savefile
 
@@ -33,8 +34,7 @@ class Widget(QtWidgets.QWidget):
         ui.groupPlusPushButton.clicked.connect(lambda: self.group_plus(1))
         ui.groupMinusPushButton.clicked.connect(lambda: self.group_plus(-1))
 
-        ui.mergePushButton.clicked.connect(self.merge)
-        ui.importPushButton.clicked.connect(self.import_masslist)
+        ui.importCompareMergePushButton.clicked.connect(self.compare_mass_list)
         ui.exportPushButton.clicked.connect(self.export)
 
     @property
@@ -142,28 +142,21 @@ class Widget(QtWidgets.QWidget):
         return ret
 
     @ui_task
-    async def merge(self):
-        ret, f = openfile("select mass list to merge", "CSV file(*.csv)")
+    async def compare_mass_list(self):
+        ret, f = openfile(
+            "select mass list to import or merge", "CSV file(*.csv)")
         if not ret:
             return
 
-        rtol = self.info.rtol
-        masslist = self.info.masslist
+        imported = await background(
+            partial(self.read_masslist_from, f), "read mass list")
+        logger.i(
+            "MassListUiPy",
+            f'compare_mass_list() path="{f}" imported={len(imported)}')
+        rows = MassListHelper.compare(self.info.masslist, imported, self.info.rtol)
 
-        def func():
-            imported = self.read_masslist_from(f)
-            MassListHelper.mergeInto(masslist, imported, rtol)
-
-        await background(func)
-        self.showMasslist()
-
-    @ui_task
-    async def import_masslist(self):
-        ret, f = openfile("select mass list to import", "CSV file(*.csv)")
-        if not ret:
-            return
-
-        self.info.masslist = await background(partial(self.read_masslist_from, f), "read mass list")
+        dialog = MassListCompareUiPy.Dialog(self.info, rows, imported)
+        dialog.exec()
         self.showMasslist()
 
     @ui_task

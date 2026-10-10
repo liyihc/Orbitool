@@ -126,7 +126,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>When adding, importing or merging masses, a new mass joins an existing mass-list entry if within this ±ppm; otherwise a new entry is created.</string>
+        <string>When adding, importing, merging or comparing masses, a new mass joins an existing mass-list entry if within this ±ppm; otherwise a new entry is created.</string>
        </property>
        <property name="text">
         <string>tolerance(ppm)</string>
@@ -171,28 +171,17 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_13">
-     <item>
-      <widget class="QPushButton" name="mergePushButton">
-       <property name="text">
-        <string>Merge</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="importPushButton">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Import</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="QPushButton" name="importCompareMergePushButton">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Import, Compare and Merge</string>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">

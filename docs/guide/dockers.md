@@ -39,8 +39,14 @@ Orbitool uses the mass list to fit peaks and calculate time series.
   mz is ignored.
 - **group**, **plus**, **minus** — add or subtract a chemical group across the
   whole list.
-- **tolerance(ppm)**, **split formula**, **Merge**, **Remove selected**.
-- **Import** / **Export** a CSV in this shape:
+- **tolerance(ppm)**, **split formula**, **Remove selected**.
+- **Import, Compare and Merge** picks a CSV and previews it against the current
+  list in a window of three aligned columns — **current**, **import**, and
+  **merge** (the union). A row filled on both sides is a match; a row filled on
+  one side only is unique to that list. Commit with **use current** (change
+  nothing), **use Import** (replace the list with the CSV), or **use Merge**
+  (replace it with the union). The preview exports to CSV.
+- **Export** the current list as a CSV in this shape:
 
   | mz | formulas |
   | --- | --- |
