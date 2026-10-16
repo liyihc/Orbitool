@@ -67,6 +67,14 @@ listing the files it found damaged in a **Damaged .RAW files** dialog, and press
 belongs to that read only: it is shown once and then forgotten, so a later read repairs
 the same file again and reports it again. `log.txt` is the permanent record.
 
+### When nothing can be shown
+
+**show average** reads the selected window, so the [Spectra List](dockers.md) must
+have been built on the [Files tab](file-tab.md) first (**All file(s)** or
+**Selected file(s)**). With no list — or a window whose scans the **Spectrum
+filters** all excluded — the tab says so and points back to the step that fixes
+it. A window lost to damage is reported as the **Damaged .RAW files** dialog above.
+
 ## Export
 
 All four write a CSV for the spectrum currently shown on the tab.

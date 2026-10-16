@@ -28,6 +28,15 @@ from .utils import (TableUtils, format_noise_lod, get_tablewidget_selected_row,
 
 TAG = "NoiseUiPy"
 
+# Empty-spectrum feedback: the caption names the situation, the body the step
+# out of it. Two distinct causes; a window lost to damage is left to
+# `reportDamagedFiles`.
+NO_LIST_CAP = "No spectra list"
+NO_LIST_BODY = 'Build the list first: File tab → "All file(s)".'
+FILTERED_CAP = "No spectra in this window"
+FILTERED_BODY = ("Every scan here is excluded by the filter."
+                 " Adjust it on the File tab and rebuild.")
+
 
 def damagedFilesMessage(damaged: thermo.DamagedScansByFile) -> str:
     """Text describing the damaged files a read pass collected, keyed by .RAW path."""
@@ -143,8 +152,20 @@ class Widget(QtWidgets.QWidget):
         The caller owns the record and reports it once its own read is over.
         """
         workspace = self.manager.workspace
-        index = self.manager.getters.spectra_list_selected_index.get()
         info_list = workspace.info.file_tab.spectrum_infos
+
+        # No window to read: the spectra list was never built (the File tab's
+        # "All file(s)"), or the selection no longer points at one. Both read as
+        # an empty result, but neither is the filter's doing, so name the
+        # missing step. `-1` stands in for "no list" to keep this one test.
+        count = len(info_list)
+        index = (self.manager.getters.spectra_list_selected_index.get()
+                 if count else -1)
+        if not 0 <= index < count:
+            logger.i(TAG,
+                     f"readSelectedSpectrum() spectra_list={count} index={index}")
+            showInfo(NO_LIST_BODY, NO_LIST_CAP)
+            return
 
         left = index
         right = left + 1
@@ -179,8 +200,14 @@ class Widget(QtWidgets.QWidget):
             self.info.current_spectrum = spectrum
             self.plotSelectSpectrum()
             self.ui.denoisePushButton.setEnabled(False)
-        else:
-            showInfo("Spectra all may be filtered", "Empty spectra")
+        elif not damaged:
+            # Nothing was averaged and nothing was damaged, so the filter is
+            # what excluded every scan in the window.
+            logger.i(TAG, f"readSelectedSpectrum() window=[{left},{right}] "
+                          f"damaged={len(damaged)}")
+            showInfo(FILTERED_BODY, FILTERED_CAP)
+        # damaged non-empty: the caller's reportDamagedFiles reports the lost
+        # scans, which names the files and reasons the empty result cannot.
 
     def plotSelectSpectrum(self):
         spectrum = self.info.current_spectrum
