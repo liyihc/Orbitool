@@ -25,7 +25,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(937, 1000)
+        MainWindow.resize(937, 700)
         MainWindow.setMinimumSize(QSize(400, 500))
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
@@ -224,7 +224,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Peak Fit", None))
         self.label_18.setText(QCoreApplication.translate("MainWindow", u"show", None))
         self.originCheckBox.setText(QCoreApplication.translate("MainWindow", u"origin", None))
         self.idealCheckBox.setText(QCoreApplication.translate("MainWindow", u"ideal", None))

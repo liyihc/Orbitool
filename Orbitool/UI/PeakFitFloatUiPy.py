@@ -95,7 +95,13 @@ class Window(QtWidgets.QMainWindow):
         self.peaks[local_index].formulas = formulas
         self.showPeak()
 
+    def updateTitle(self):
+        peak = self.info.raw_peaks[self.original_index]
+        mz = peak.mz[peak.intensity.argmax()]
+        self.setWindowTitle(f"Peak Fit - {mz:.4f}")
+
     def showPeak(self):
+        self.updateTitle()
         origin_peak = self.info.raw_peaks[self.original_index]
         peaks = self.info.peaks
         show_peaks = self.peaks
