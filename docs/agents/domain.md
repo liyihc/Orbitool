@@ -12,14 +12,18 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ## File structure
 
-Single-context repo (most repos):
+Single-context repo (this repo):
 
 ```
 /
 ├── GLOSSARY.md
 ├── docs/adr/
-│   ├── 0001-event-sourced-orders.md
-│   └── 0002-postgres-for-write-model.md
+│   ├── workspace/
+│   │   └── 20261009-keep-implicit-list-dataset-group-dispatch.md
+│   ├── packaging/
+│   │   └── 20261010-slim-release-build-by-config.md
+│   └── mass-list/
+│       └── 20261010-compare-preview.md
 └── src/
 ```
 
@@ -38,6 +42,18 @@ Multi-context repo (presence of `GLOSSARY-MAP.md` at the root):
         └── docs/adr/
 ```
 
+## ADR naming and layout
+
+`docs/adr/` is grouped one level deep by the primary impact area of the decision
+(`workspace/`, `packaging/`, `mass-list/`, …). The set of directories is open:
+add one for a module or feature when its first ADR appears. Put a decision with no
+clear primary area in `cross-cutting/`.
+
+Name each ADR `YYYYMMDD-slug.md`, where the date is the day the decision was made
+(the file's creation date) and carries no separators. Same-day ADRs are ordered
+only by slug. Cite one as `ADR YYYYMMDD (short title)`; the date locates it, the
+title disambiguates same-day entries.
+
 ## Use the glossary's vocabulary
 
 When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `GLOSSARY.md`. Don't drift to synonyms the glossary explicitly avoids.
@@ -48,4 +64,4 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts ADR-0007 (event-sourced orders), but worth reopening because…_
+> _Contradicts ADR 20261009 (keep implicit List dispatch), but worth reopening because…_

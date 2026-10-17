@@ -32,7 +32,7 @@ a = Analysis(['Main.py'],
                 'tkinter',
                 # NOTE: do not add scipy subpackages here — scipy loads them
                 # lazily from C extensions and excluding one crashes startup
-                # (see docs/adr/0002-slim-release-build-by-config.md).
+                # (see docs/adr/packaging/20261010-slim-release-build-by-config.md).
                 # Guard against a stray PyQt6 in the build environment.
                 'PyQt6'],
              win_no_prefer_redirects=False,

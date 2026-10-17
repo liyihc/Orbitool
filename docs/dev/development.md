@@ -116,7 +116,7 @@ workflow tabs; the side panels (Spectra List, Peak List, Mass List) are
     the drop lists and the reason each entry exists. scipy subpackages are
     deliberately kept: they are imported from C extensions, so excluding them
     crashes the app. See
-    [ADR 0002](../adr/0002-slim-release-build-by-config.md).
+    [ADR 20261010 (slim release build)](../adr/packaging/20261010-slim-release-build-by-config.md).
   - The pytest step is silent while tests pass; a failure prints the offending
     test's captured logs and traceback (see [Everyday](#everyday)). It ends with one
     verdict line: `pytest: OK (exit 0)`, or
