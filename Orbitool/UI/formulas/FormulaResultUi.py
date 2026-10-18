@@ -16,10 +16,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QHBoxLayout, QHeaderView,
-    QLabel, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
-    QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout,
-    QWidget)
+    QLineEdit, QMainWindow, QMenuBar, QPushButton,
+    QSizePolicy, QSpacerItem, QStatusBar, QTableWidget,
+    QTableWidgetItem, QToolButton, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -64,21 +63,17 @@ class Ui_MainWindow(object):
         self.resultTableWidget.setMinimumSize(QSize(600, 0))
         self.resultTableWidget.setMaximumSize(QSize(800, 16777215))
         self.resultTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.resultTableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.resultTableWidget.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.resultTableWidget.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.resultTableWidget.horizontalHeader().setStretchLastSection(True)
 
         self.verticalLayout_4.addWidget(self.resultTableWidget)
 
-        self.label = QLabel(self.centralwidget)
-        self.label.setObjectName(u"label")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy)
-        self.label.setWordWrap(True)
+        self.showDistributionPushButton = QPushButton(self.centralwidget)
+        self.showDistributionPushButton.setObjectName(u"showDistributionPushButton")
 
-        self.verticalLayout_4.addWidget(self.label)
+        self.verticalLayout_4.addWidget(self.showDistributionPushButton)
 
         self.isotopesTableWidget = QTableWidget(self.centralwidget)
         if (self.isotopesTableWidget.columnCount() < 6):
@@ -99,10 +94,17 @@ class Ui_MainWindow(object):
         self.isotopesTableWidget.setMinimumSize(QSize(600, 0))
         self.isotopesTableWidget.setMaximumSize(QSize(800, 16777215))
         self.isotopesTableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.isotopesTableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.isotopesTableWidget.setSelectionMode(QAbstractItemView.SingleSelection)
         self.isotopesTableWidget.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.isotopesTableWidget.horizontalHeader().setStretchLastSection(True)
 
         self.verticalLayout_4.addWidget(self.isotopesTableWidget)
+
+        self.editPeakPushButton = QPushButton(self.centralwidget)
+        self.editPeakPushButton.setObjectName(u"editPeakPushButton")
+
+        self.verticalLayout_4.addWidget(self.editPeakPushButton)
 
 
         self.horizontalLayout.addLayout(self.verticalLayout_4)
@@ -111,11 +113,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.widget = QWidget(self.centralwidget)
         self.widget.setObjectName(u"widget")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
-        self.widget.setSizePolicy(sizePolicy1)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.widget.sizePolicy().hasHeightForWidth())
+        self.widget.setSizePolicy(sizePolicy)
 
         self.verticalLayout_2.addWidget(self.widget)
 
@@ -141,15 +143,15 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
 
-        self.acceptEmptyToolButton = QToolButton(self.centralwidget)
-        self.acceptEmptyToolButton.setObjectName(u"acceptEmptyToolButton")
+        self.deleteToolButton = QToolButton(self.centralwidget)
+        self.deleteToolButton.setObjectName(u"deleteToolButton")
 
-        self.horizontalLayout_2.addWidget(self.acceptEmptyToolButton)
+        self.horizontalLayout_2.addWidget(self.deleteToolButton)
 
-        self.acceptToolButton = QToolButton(self.centralwidget)
-        self.acceptToolButton.setObjectName(u"acceptToolButton")
+        self.useSelectedToolButton = QToolButton(self.centralwidget)
+        self.useSelectedToolButton.setObjectName(u"useSelectedToolButton")
 
-        self.horizontalLayout_2.addWidget(self.acceptToolButton)
+        self.horizontalLayout_2.addWidget(self.useSelectedToolButton)
 
         self.closeToolButton = QToolButton(self.centralwidget)
         self.closeToolButton.setObjectName(u"closeToolButton")
@@ -185,9 +187,12 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem3 = self.resultTableWidget.horizontalHeaderItem(3)
         ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"unsaturation", None))
 #if QT_CONFIG(tooltip)
-        self.resultTableWidget.setToolTip(QCoreApplication.translate("MainWindow", u"Double to show isotopes for this formula", None))
+        self.resultTableWidget.setToolTip(QCoreApplication.translate("MainWindow", u"Double-click a row to show its natural isotope distribution.", None))
 #endif // QT_CONFIG(tooltip)
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Double-clicking above table will display the natural isotope distribution", None))
+#if QT_CONFIG(tooltip)
+        self.showDistributionPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Double-clicking the row also triggers this action.", None))
+#endif // QT_CONFIG(tooltip)
+        self.showDistributionPushButton.setText(QCoreApplication.translate("MainWindow", u"Show actual distribution of selected formula", None))
         ___qtablewidgetitem4 = self.isotopesTableWidget.horizontalHeaderItem(0)
         ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"formula", None))
         ___qtablewidgetitem5 = self.isotopesTableWidget.horizontalHeaderItem(1)
@@ -195,17 +200,21 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem6 = self.isotopesTableWidget.horizontalHeaderItem(2)
         ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"tolerance(ppm)", None))
         ___qtablewidgetitem7 = self.isotopesTableWidget.horizontalHeaderItem(3)
-        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"abundance", None))
+        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"theoretical ratio", None))
         ___qtablewidgetitem8 = self.isotopesTableWidget.horizontalHeaderItem(4)
         ___qtablewidgetitem8.setText(QCoreApplication.translate("MainWindow", u"actual intensity", None))
         ___qtablewidgetitem9 = self.isotopesTableWidget.horizontalHeaderItem(5)
         ___qtablewidgetitem9.setText(QCoreApplication.translate("MainWindow", u"actual ratio", None))
 #if QT_CONFIG(tooltip)
-        self.isotopesTableWidget.setToolTip(QCoreApplication.translate("MainWindow", u"Double click to save formula for peaks", None))
+        self.isotopesTableWidget.setToolTip(QCoreApplication.translate("MainWindow", u"Double-click a row to edit the selected peak's formula.", None))
 #endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.editPeakPushButton.setToolTip(QCoreApplication.translate("MainWindow", u"Double-clicking the row also triggers this action.", None))
+#endif // QT_CONFIG(tooltip)
+        self.editPeakPushButton.setText(QCoreApplication.translate("MainWindow", u"Edit selected peak's formula", None))
         self.showAllToolButton.setText(QCoreApplication.translate("MainWindow", u"show all", None))
-        self.acceptEmptyToolButton.setText(QCoreApplication.translate("MainWindow", u"Accept empty list", None))
-        self.acceptToolButton.setText(QCoreApplication.translate("MainWindow", u"Accept", None))
+        self.deleteToolButton.setText(QCoreApplication.translate("MainWindow", u"Delete formula", None))
+        self.useSelectedToolButton.setText(QCoreApplication.translate("MainWindow", u"Use selected formula", None))
         self.closeToolButton.setText(QCoreApplication.translate("MainWindow", u"Close", None))
     # retranslateUi
 

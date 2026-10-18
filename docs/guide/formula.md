@@ -55,9 +55,20 @@ You can input a **formula** or a **mass**:
 
 In the result window:
 
-- **Double-click** a row to display its natural isotope distribution.
-- **Double-click** an isotope row to save that formula to a peak.
-- **show all**, **Accept**, and **Accept empty list** finalize the assignment.
+- Rows are selected as whole rows. **Show actual distribution of selected
+  formula** (or double-clicking a row) plots that formula's natural isotope
+  distribution; **theoretical ratio** is the isotope abundance relative to the
+  origin formula.
+- **Edit selected peak's formula** (or double-clicking an isotope row) writes that
+  formula to the nearest peak.
+- **show all** redraws every candidate formula on the plot.
+- Opened from the [Peak Fit window](peak-fit.md#formula-result-window), the
+  window is bound to one peak: its m/z is in the title, the input is read-only,
+  and **Calc** recalculates candidates after formula-setting changes.
+  **Delete formula** clears the peak's assignment, **Use selected formula**
+  replaces it with the selected candidates, and **Close** leaves it unchanged.
+- The menu-opened calculator has no peak to accept into, so only **Close** is
+  shown.
 
 ## Isotope number limit
 

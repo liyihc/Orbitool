@@ -104,6 +104,11 @@ class Manager(QObject):
     def busy(self):
         return self._busy_count > 0
 
+    def close_peak_float_wins(self) -> None:
+        for win in list(self.peak_float_wins.values()):
+            win.close()
+        self.peak_float_wins.clear()
+
     def start_thread(self, thread: QThread) -> None:
         """
         Start a worker thread, holding a strong reference to it until Qt

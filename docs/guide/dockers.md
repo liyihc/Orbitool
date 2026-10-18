@@ -22,10 +22,10 @@ workspace has been calibrated with denoise, which is what records the tables.
 
 The fitted peaks for the current spectrum.
 
-- Untick **bind to plot** to navigate independently of the [Peak Fit
-  plot](peak-fit.md).
-- **Double-click** a row to edit the peak; type in **goto** to jump to the
-  nearest mass.
+- Rows are selected as whole rows; Ctrl/Shift extends the selection. **Only
+  selected peaks** and **filter selected** act on that selection.
+- **Double-click** a row to open its [Peak Fit window](peak-fit.md#peak-fit-window);
+  type in **goto** to jump to the nearest mass.
 - **Right-click** a row and choose **Jump to peak** to center the [Peak Fit
   plot](peak-fit.md) on that peak (±5 m/z) and switch to its tab.
 - Columns: position, formula, intensity, ppm, area, tag, peaks num.

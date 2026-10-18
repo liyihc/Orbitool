@@ -182,6 +182,8 @@ class Widget(QtWidgets.QWidget):
 
         mz, residual = await background(formula_and_residual, "calc formula")
 
+        self.manager.close_peak_float_wins()
+
         info = self.info
         info.spectrum, info.raw_peaks = spectrum, raw_peaks
         info.raw_split_num = raw_split_num
@@ -560,6 +562,17 @@ class Widget(QtWidgets.QWidget):
 
     @ui_task
     async def fit(self):
+        if self.manager.peak_float_wins:
+            ret = QtWidgets.QMessageBox.question(
+                self, "close Peak Fit windows?",
+                "Close the open Peak Fit windows and continue?\n"
+                "Unsaved changes in those windows will be discarded.",
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                QtWidgets.QMessageBox.StandardButton.No)
+            if ret != QtWidgets.QMessageBox.StandardButton.Yes:
+                return
+            self.manager.close_peak_float_wins()
+
         method: FitMethod = self.ui.fitComboBox.currentData()
         if method == FitMethod.calc:
             await self.fit_formula()

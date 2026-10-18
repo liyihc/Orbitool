@@ -161,6 +161,7 @@ class Window(QtWidgets.QMainWindow):
 
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         self.formula.close()
+        self.manager.close_peak_float_wins()
         for win in list(self.manager.mass_defect_wins):
             win.close()
         if self.manager.formulas_result_win is not None:
@@ -221,6 +222,10 @@ class Window(QtWidgets.QMainWindow):
             UiUtils.showInfo("I have try to save more data, but below data is lost\n" +
                              "\n".join(h5_brokens), "file broken, please save as a new file")
             h5_brokens.clear()
+        self.manager.close_peak_float_wins()
+        if self.manager.formulas_result_win is not None:
+            self.manager.formulas_result_win.close()
+            self.manager.formulas_result_win = None
         self.manager.workspace = workspace
         self.manager.init_or_restored.emit()
         logger.i(

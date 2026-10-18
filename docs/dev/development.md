@@ -54,9 +54,9 @@ exact dependency versions locked in `uv.lock` (direct dependencies live in
 the GUI against real `.RAW` files that are not committed; `pytest.ini` excludes
 that suite from the default run. Offscreen tests that need no RAW data are
 listed explicitly in `pytest.ini` `testpaths`, so they do run with the default
-suite: `test_timeseries_restore.py` in this folder and the `test_*_migration.py`
-regression tests for the `ui_task` migration (under `Orbitool/UI/`,
-`Orbitool/UI/file_tab/`, and `Orbitool/UI/formulas/`).
+suite: `test_timeseries_restore.py` and `test_peak_fit_float.py` in this folder
+and the `test_*_migration.py` regression tests for the `ui_task` migration
+(under `Orbitool/UI/`, `Orbitool/UI/file_tab/`, and `Orbitool/UI/formulas/`).
 
 To run the real-GUI suite:
 

@@ -40,6 +40,10 @@ class Widget(QtWidgets.QWidget):
         ui = self.ui
         ui.setupUi(self)
 
+        ui.tableWidget.setSelectionBehavior(
+            QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        ui.tableWidget.setSelectionMode(
+            QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         ui.doubleSpinBox.setKeyboardTracking(False)
         ui.doubleSpinBox.valueChanged.connect(self.goto_mass)
         ui.gotoToolButton.clicked.connect(self.goto_mass)

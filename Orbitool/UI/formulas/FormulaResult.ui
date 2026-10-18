@@ -48,10 +48,16 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>Double to show isotopes for this formula</string>
+           <string>Double-click a row to show its natural isotope distribution.</string>
           </property>
           <property name="editTriggers">
            <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::ExtendedSelection</enum>
           </property>
           <property name="horizontalScrollMode">
            <enum>QAbstractItemView::ScrollPerPixel</enum>
@@ -82,18 +88,12 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="label">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <widget class="QPushButton" name="showDistributionPushButton">
+          <property name="toolTip">
+           <string>Double-clicking the row also triggers this action.</string>
           </property>
           <property name="text">
-           <string>Double-clicking above table will display the natural isotope distribution</string>
-          </property>
-          <property name="wordWrap">
-           <bool>true</bool>
+           <string>Show actual distribution of selected formula</string>
           </property>
          </widget>
         </item>
@@ -112,10 +112,16 @@
            </size>
           </property>
           <property name="toolTip">
-           <string>Double click to save formula for peaks</string>
+           <string>Double-click a row to edit the selected peak's formula.</string>
           </property>
           <property name="editTriggers">
            <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::SingleSelection</enum>
           </property>
           <property name="horizontalScrollMode">
            <enum>QAbstractItemView::ScrollPerPixel</enum>
@@ -140,7 +146,7 @@
           </column>
           <column>
            <property name="text">
-            <string>abundance</string>
+            <string>theoretical ratio</string>
            </property>
           </column>
           <column>
@@ -153,6 +159,16 @@
             <string>actual ratio</string>
            </property>
           </column>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="editPeakPushButton">
+          <property name="toolTip">
+           <string>Double-clicking the row also triggers this action.</string>
+          </property>
+          <property name="text">
+           <string>Edit selected peak's formula</string>
+          </property>
          </widget>
         </item>
        </layout>
@@ -200,16 +216,16 @@
        </spacer>
       </item>
       <item>
-       <widget class="QToolButton" name="acceptEmptyToolButton">
+       <widget class="QToolButton" name="deleteToolButton">
         <property name="text">
-         <string>Accept empty list</string>
+         <string>Delete formula</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QToolButton" name="acceptToolButton">
+       <widget class="QToolButton" name="useSelectedToolButton">
         <property name="text">
-         <string>Accept</string>
+         <string>Use selected formula</string>
         </property>
        </widget>
       </item>

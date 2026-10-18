@@ -347,7 +347,7 @@ class Widget(QtWidgets.QWidget):
 
         if manager.formulas_result_win is not None:
             manager.formulas_result_win.close()
-            del manager.formulas_result_win
+            manager.formulas_result_win = None
         manager.formulas_result_win = FormulaResultUiPy.Window.fromInputStr(
             manager, text)
         manager.formulas_result_win.show()

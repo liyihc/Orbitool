@@ -151,11 +151,10 @@ def test_calc_recognizes_integer_mass():
     manager = SimpleNamespace(
         workspace=SimpleNamespace(info=info))
 
-    _, mass, _, peak_index = FormulaResultUiPy.calc(manager, "50")
+    _, mass, _ = FormulaResultUiPy.calc(manager, "50")
     assert mass == 50.0
-    assert peak_index is None
 
-    _, mass2, formulas2, _ = FormulaResultUiPy.calc(manager, "CH4")
+    _, mass2, formulas2 = FormulaResultUiPy.calc(manager, "CH4")
     assert len(formulas2) == 1
     assert abs(mass2 - Formula("CH4").mass()) < 1e-9
 
@@ -167,7 +166,7 @@ def test_calc_recognizes_integer_mass():
 def test_formula_result_join_starts_while_busy(env):
     manager = env.window.manager
     win = FormulaResultWindow(
-        manager, "CH4", 16.0313, [Formula("CH4")], None)
+        manager, "CH4", 16.0313, [Formula("CH4")])
     try:
         manager.set_busy(True)
         env.busy.clear()
