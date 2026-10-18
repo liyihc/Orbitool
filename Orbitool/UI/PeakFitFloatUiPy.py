@@ -325,7 +325,7 @@ class Window(QtWidgets.QMainWindow):
         ax.set_xlim(origin_peak.mz.min(), origin_peak.mz.max())
         self.plot.canvas.draw()
 
-    @ui_task
+    @ui_task(mode="light")
     async def replotPeak(self):
         self.plotPeak()
 

@@ -404,7 +404,7 @@ def test_calibration_peak_float_async_slots(env):
     try:
         win.replotPeak()
         assert env.dialogs == []
-        assert env.busy == [True, False]
+        assert env.busy == []
         assert not window.manager.busy
         env.reset()
 
