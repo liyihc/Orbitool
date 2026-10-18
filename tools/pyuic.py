@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+import shutil
+import subprocess
 
 
 def _output_path(ui: Path) -> Path:
@@ -16,18 +18,42 @@ def _output_path(ui: Path) -> Path:
     return ui.with_name(ui.stem + 'Ui.py')
 
 
-def pyuic(path):
+def _run_uic(ui: Path, output: Path) -> None:
+    uic = shutil.which("pyside6-uic")
+    if uic is None:
+        raise SystemExit("pyside6-uic not found; run this through `uv run`")
+    subprocess.run([uic, str(ui), "-o", str(output)], check=True)
+
+
+def pyuic(path, *, check=False):
     path = Path(path)
+    stale = []
     for ui in path.glob("**/*.ui"):
         uipy = _output_path(ui)
-
         exist = uipy.exists()
-        if not exist or os.path.getmtime(ui) > os.path.getmtime(uipy):
+        needs_update = not exist or os.path.getmtime(ui) > os.path.getmtime(uipy)
+
+        if check:
+            if needs_update:
+                stale.append((ui, uipy))
+            continue
+
+        if needs_update:
             if exist:
                 print("Override old version", ui)
             else:
                 print("Generate", ui)
-            os.system(f'pyside6-uic "{ui}" -o "{uipy}"')
+            _run_uic(ui, uipy)
+
+    if not check:
+        return True
+
+    for ui, uipy in stale:
+        print(f"stale: {ui} -> {uipy}")
+    if stale:
+        print("Run `uv run python util.py pyuic` and stage the generated files.")
+        return False
+    return True
 
 
 def clear(path):

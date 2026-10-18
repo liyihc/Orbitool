@@ -82,8 +82,10 @@ To run the real-GUI suite:
   logic lives in the hand-written `*UiPy.py` siblings.
 - A few generated files end in uppercase `.Py`; those imports only resolve on
   case-insensitive filesystems (Windows).
-- `.pre-commit-config.yaml` reruns this command when a `.ui` or generated file is
-  staged; a drift fails the commit. Enable it once with `uvx pre-commit install`.
+- `.pre-commit-config.yaml` runs `util.py pyuic --check` when a `.ui` or generated
+  file is staged. It fails when a `.ui` is newer than its generated file, without
+  rewriting anything; run the command without `--check` and stage the result.
+  Enable the hook once with `uvx pre-commit install`.
 
 ## UI tooltips
 

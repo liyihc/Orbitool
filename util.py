@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 
 if __name__ == "__main__":
@@ -7,6 +8,7 @@ if __name__ == "__main__":
 
     pyuic_parser = subparsers.add_parser('pyuic')
     pyuic_parser.add_argument("--clear", action="store_true")
+    pyuic_parser.add_argument("--check", action="store_true")
     count_parser = subparsers.add_parser('count')
     count_parser.add_argument("root", type=str, nargs='?', default="default")
     count_parser.add_argument(
@@ -26,6 +28,9 @@ if __name__ == "__main__":
         from tools.pyuic import pyuic, clear
         if args.clear:
             clear(os.path.join(root, "Orbitool", "UI"))
+        elif args.check:
+            if not pyuic(os.path.join(root, "Orbitool", "UI"), check=True):
+                sys.exit(1)
         else:
             pyuic(os.path.join(root, "Orbitool", "UI"))
     elif args.subparser_name == "count":

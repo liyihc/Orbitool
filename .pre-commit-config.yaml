@@ -2,8 +2,8 @@ repos:
   - repo: local
     hooks:
       - id: pyuic-drift
-        name: regenerate Qt UI files
-        entry: uv run python util.py pyuic
+        name: Qt UI files are up to date
+        entry: uv run python util.py pyuic --check
         language: system
         files: 'Orbitool/.*(\.ui|Ui\.py|Ui\.Py)$'
         pass_filenames: false
