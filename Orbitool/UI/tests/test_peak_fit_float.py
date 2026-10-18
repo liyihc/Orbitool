@@ -174,6 +174,22 @@ def test_new_formula_column_shows_for_added_peak_formula(env):
         win.close()
 
 
+def test_new_formula_column_stays_hidden_for_a_peaks_only_change(env):
+    window = env.window
+    _install_two_segments(window)
+    win = PeakFitFloatUiPy.Window(window.manager, 0)
+    try:
+        win.peaks = win.peaks + [_fitted(100.002, None)]
+        win.showPeak()
+
+        assert win.ui.peaksTableWidget.isColumnHidden(2)
+        summary = win.ui.summaryLabel.text()
+        assert "peaks 2 \u2192 3" in summary
+        assert "formulas" not in summary
+    finally:
+        win.close()
+
+
 def test_segment_lookup_survives_another_window_save(env):
     window = env.window
     _install_two_segments(window)

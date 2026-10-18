@@ -56,7 +56,8 @@ Double-click a Peak List row to open the window for its segment. The title is
 - Right: the show toggles and plot, then the Peaks table with **Edit selected
   peak's formula** and a change summary, then **Close** / **Save**.
 - `formula` is the saved assignment. The `new formula` column appears only when
-  a formula actually changes, and shows the uncommitted edit.
+  a formula actually changes, and shows the uncommitted edit. A peak-count
+  change alone does not reveal it.
 - Peak rows are selected as whole rows; Ctrl/Shift selects several. **Edit
   selected peak's formula** (or double-clicking a row) opens the formula result
   window for the current row.
@@ -72,9 +73,11 @@ title shows the m/z, the input is read-only, and **Calc** regenerates candidates
 after you change formula settings. Both tables select whole rows;
 **Show actual distribution of selected formula** (or double-clicking a result
 row) plots the isotope distribution. **Edit selected peak's formula** (or
-double-clicking an isotope row) writes that formula back to the peak. **Delete
-formula** clears the peak's assignment; **Use selected formula** replaces it with
-the selected candidates; **Close** leaves it unchanged.
+double-clicking an isotope row) writes that formula back to the matching peak,
+which may belong to another segment: the window matches against the whole Peak
+List, not just the open segment. **Delete formula** clears the peak's
+assignment; **Use selected formula** replaces it with the selected candidates;
+**Close** leaves it unchanged.
 
 The formula window opened from the menu is a calculator with no peak to accept
 into, so only **Close** is shown.

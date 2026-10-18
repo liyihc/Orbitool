@@ -44,6 +44,34 @@ understate what it does.
   that uncommitted edits are discarded), because it rewrites saved peaks behind
   their working copy.
 
+## UI contract
+
+The behaviour settled with this design, recorded here so review and tests have a
+durable source. The user guide describes the same contract for users
+(`docs/guide/peak-fit.md`, `docs/guide/formula.md`).
+
+- Peak List and the Peaks/result tables select whole rows; Peak List and Peaks
+  keep Ctrl/Shift multi-select, while the isotope table is single-row.
+- The Peak Fit title is `Peak Fit - <mz:.4f> - <saved formulas>` (deduped,
+  joined `, `; suffix omitted when none). The layout is left = mz-intensity
+  table, peak num, Re-fit; right = show toggles, plot, Peaks table, with
+  `Edit selected peak's formula` then the change summary under the table and
+  `Close` / `Save` at the bottom right.
+- `formula` is the saved assignment; `new formula` mirrors it and is shown only
+  when a formula actually changes. A peak-count change alone does not reveal it.
+  The summary lists peak count, positions, intensities, formulas; `Save` is
+  disabled with no changes; `Close` discards silently.
+- A bound formula window uses the owner's pending peaks plus every other
+  segment's saved or pending peaks. It must not narrow to the owner's segment:
+  a formula's isotope peaks usually belong to other segments, so a segment-only
+  view hides them.
+- A bound formula window fixes the m/z in its title, keeps the input read-only,
+  keeps `Calc` enabled (settings may change), renames `abundance` to
+  `theoretical ratio`, and offers `Delete formula` / `Use selected formula` /
+  `Close`. The menu-opened instance is a calculator with `Close` only.
+- `Fit` with open Peak Fit windows asks to close them first and warns that
+  uncommitted edits are discarded.
+
 ## Consequences
 
 Concurrent edits in different segment windows no longer corrupt each other's

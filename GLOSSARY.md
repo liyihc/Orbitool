@@ -55,3 +55,9 @@ _Avoid_: edited formula, pending formula
 The natural isotope abundance of an isotope relative to the origin formula,
 shown in the isotope table.
 _Avoid_: abundance
+
+**Working set** (Peak Fit):
+Every fitted peak a formula result window can match: the saved Peak List with
+each open Peak Fit window's pending peaks substituted for its segment. It spans
+all segments because a formula's isotope peaks usually sit in other segments.
+_Avoid_: owner peaks, current segment

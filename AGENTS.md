@@ -33,6 +33,9 @@ generation, and packaging. Read it before running any of them.
   `.gitignore` individually rather than blanket-ignoring all CSVs
 - Judge a test run by its exit code (`$LASTEXITCODE`); never pipe `pytest` through
   `Select-Object -Last N` — that hides failure tracebacks
+- When a shell command needs more than simple quoting or globbing, write a short
+  Python script and run it with `uv run python` instead of a complex PowerShell
+  one-liner; for plain searches, `rg -m N 'pattern'` with single quotes
 - Code and docs land together: whenever you change code, update every doc that the
   change makes stale. A behavior work-flow change touches `docs/guide/`; a
   command/build change touches `docs/dev/`. Also update `readme.md` or

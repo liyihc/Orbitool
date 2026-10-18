@@ -19,6 +19,13 @@ TAG = "FormulaResultUiPy"
 
 
 class Window(QtWidgets.QMainWindow):
+    """Formula result window: a calculator, or bound to one Peak Fit peak.
+
+    Either way it matches peaks across the whole Peak List (all segments), not
+    only one segment; see `_working_targets` and the peak-fit ADR
+    (`docs/adr/peak-fit/20261018-peak-fit-window-ownership-and-commit-model.md`).
+    """
+
     acceptSignal = QtCore.Signal(list)
 
     def __init__(self, manager: Manager, input: str, mass: float, formulas: List[Formula], *, owner=None, owner_row: Optional[int] = None) -> None:
@@ -100,6 +107,12 @@ class Window(QtWidgets.QMainWindow):
         return self._working_targets()[0]
 
     def _working_targets(self):
+        """Return every peak plus the window/row each one belongs to.
+
+        The list spans all segments, not only the owner's: a formula's isotope
+        peaks usually sit in other segments, so an owner-only view would hide
+        them. Pending peaks of open Peak Fit windows replace their segment.
+        """
         info = self.manager.workspace.info.peak_fit_tab
         saved = info.peaks
         if not self.peak_bound:

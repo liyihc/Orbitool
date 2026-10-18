@@ -60,7 +60,8 @@ In the result window:
   distribution; **theoretical ratio** is the isotope abundance relative to the
   origin formula.
 - **Edit selected peak's formula** (or double-clicking an isotope row) writes that
-  formula to the nearest peak.
+  formula to the nearest peak in the whole Peak List; the matching peak may
+  belong to another segment.
 - **show all** redraws every candidate formula on the plot.
 - Opened from the [Peak Fit window](peak-fit.md#formula-result-window), the
   window is bound to one peak: its m/z is in the title, the input is read-only,

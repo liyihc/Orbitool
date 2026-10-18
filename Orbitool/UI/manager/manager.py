@@ -55,6 +55,7 @@ class Manager(QObject):
 
         self.formulas_result_win: QMainWindow = None
         self.calibration_detail_win: QMainWindow = None
+        # segment original_index -> Peak Fit window; see the peak-fit ADR
         self.peak_float_wins: Dict[int, QMainWindow] = {}
         self.mass_defect_wins: List[QWidget] = []
 

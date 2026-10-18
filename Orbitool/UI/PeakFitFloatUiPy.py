@@ -21,6 +21,8 @@ TAG = "PeakFitFloatUiPy"
 
 
 class Window(QtWidgets.QMainWindow):
+    """One segment's Peak Fit window; it owns at most one formula result window."""
+
     callback = QtCore.Signal()
 
     @classmethod
@@ -36,6 +38,7 @@ class Window(QtWidgets.QMainWindow):
         return win
 
     def __init__(self, manager: Manager, original_index: int) -> None:
+        """Build a window without registering it; use `get_or_create` to share."""
         super().__init__()
         self.manager = manager
         self.ui = PeakFitFloatUi.Ui_MainWindow()

@@ -70,6 +70,10 @@ To run the real-GUI suite:
   `Orbitool/UI/tests/migration_harness.py` does — it pins a `QApplication`
   (constructing `Window()` without one aborts the process) and disables
   multiprocessing/threading for determinism.
+- To inspect a layout without a desktop, write a builder whose `build()` returns
+  the widget (the same setup as an offscreen test) and run
+  `uv run python tools/ui_screenshot.py builder.py shot.png`. This is opt-in:
+  no test generates images and no image is written unless the tool is invoked.
 
 ## UI code generation
 
@@ -78,6 +82,8 @@ To run the real-GUI suite:
   logic lives in the hand-written `*UiPy.py` siblings.
 - A few generated files end in uppercase `.Py`; those imports only resolve on
   case-insensitive filesystems (Windows).
+- `.pre-commit-config.yaml` reruns this command when a `.ui` or generated file is
+  staged; a drift fails the commit. Enable it once with `uvx pre-commit install`.
 
 ## UI tooltips
 
@@ -97,6 +103,12 @@ The main window is `MainUiPy.Window` (hand-written) over the generated
 `MainUi.Ui_MainWindow` from `Main.ui`. The `QTabWidget` holds the left-to-right
 workflow tabs; the side panels (Spectra List, Peak List, Mass List) are
 `QDockWidget`s, not tabs.
+
+Peak Fit float windows are segment-scoped and own their formula result window;
+that window matches isotopes across the whole working set, not just its
+segment. Read
+[the peak-fit ADR](../adr/peak-fit/20261018-peak-fit-window-ownership-and-commit-model.md)
+before changing their ownership, range lookup, or isotope matching.
 
 ## Packaging a release
 
