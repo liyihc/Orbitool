@@ -181,6 +181,16 @@ def test_formula_result_join_starts_while_busy(env):
         win.close()
 
 
+def test_formula_result_selects_nearest_candidate(env):
+    manager = env.window.manager
+    win = FormulaResultWindow(
+        manager, "18.0106", 18.0106, [Formula("CH4"), Formula("H2O")])
+    try:
+        assert win.ui.resultTableWidget.currentRow() == 1
+    finally:
+        win.close()
+
+
 # --------------------------------------------------------------------------
 # MassList
 # --------------------------------------------------------------------------

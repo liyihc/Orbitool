@@ -263,7 +263,7 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem3 = self.peaksTableWidget.horizontalHeaderItem(1)
         ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"formula", None))
         ___qtablewidgetitem4 = self.peaksTableWidget.horizontalHeaderItem(2)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"new formula", None))
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"new formula*", None))
         ___qtablewidgetitem5 = self.peaksTableWidget.horizontalHeaderItem(3)
         ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"intensity", None))
         ___qtablewidgetitem6 = self.peaksTableWidget.horizontalHeaderItem(4)

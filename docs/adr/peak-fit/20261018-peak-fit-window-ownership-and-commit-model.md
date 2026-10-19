@@ -51,13 +51,13 @@ durable source. The user guide describes the same contract for users
 (`docs/guide/peak-fit.md`, `docs/guide/formula.md`).
 
 - Peak List and the Peaks/result tables select whole rows; Peak List and Peaks
-  keep Ctrl/Shift multi-select, while the isotope table is single-row.
+  keep Ctrl/Shift multi-select, while the isotope table is single-column.
 - The Peak Fit title is `Peak Fit - <mz:.4f> - <saved formulas>` (deduped,
   joined `, `; suffix omitted when none). The layout is left = mz-intensity
   table, peak num, Re-fit; right = show toggles, plot, Peaks table, with
   `Edit selected peak's formula` then the change summary under the table and
   `Close` / `Save` at the bottom right.
-- `formula` is the saved assignment; `new formula` mirrors it and is shown only
+- `formula` is the saved assignment; `new formula*` mirrors it and is shown only
   when a formula actually changes. A peak-count change alone does not reveal it.
   The summary lists peak count, positions, intensities, formulas; `Save` is
   disabled with no changes; `Close` discards silently.

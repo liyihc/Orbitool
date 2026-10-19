@@ -2,13 +2,12 @@ from copy import deepcopy
 import re
 from typing import List, Optional
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 from pyteomics.mass.mass import isotopologues
 
 from Orbitool import logger
 from Orbitool.models.formula import Formula
 from Orbitool.models.spectrum import FittedPeak
-from Orbitool.UI.component import Plot
 from Orbitool.UI.manager import Manager, ui_task
 from Orbitool.UI.utils import TableUtils
 from Orbitool.utils import binary_search
@@ -16,6 +15,110 @@ from Orbitool.utils import binary_search
 from . import FormulaResultUi
 
 TAG = "FormulaResultUiPy"
+
+_RAW_COLOR = QtGui.QColor("#1f77b4")
+_THEORY_COLOR = QtGui.QColor("#d62728")
+
+
+class IsotopePlot(QtWidgets.QWidget):
+    """One isotope's raw peak against its theoretical height.
+
+    The x range is the matched peak's stored m/z span, so this is that
+    isotope's slice of the old overview plot. The y axis autoscales to the
+    larger of that peak and the theoretical line: heights are comparable
+    within one column, not across columns. Mouse events pass through so the
+    enclosing table can still select the column.
+    """
+
+    def __init__(self, peak: Optional[FittedPeak], theoretical_mass: float,
+                 theoretical_intensity: float, rtol: float,
+                 parent=None) -> None:
+        super().__init__(parent)
+        self.peak = peak
+        self.theoretical_mass = theoretical_mass
+        self.theoretical_intensity = theoretical_intensity
+        self.rtol = rtol
+        self.setMinimumSize(90, 120)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                           QtWidgets.QSizePolicy.Policy.Expanding)
+        self.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+    def _ranges(self):
+        if self.peak is not None and len(self.peak.mz):
+            x_min = float(self.peak.mz.min())
+            x_max = float(self.peak.mz.max())
+            y_max = float(self.peak.intensity.max())
+        else:
+            pad = abs(self.theoretical_mass) * self.rtol
+            x_min = self.theoretical_mass - pad
+            x_max = self.theoretical_mass + pad
+            y_max = 0.0
+        if x_max <= x_min:
+            pad = max(abs(self.theoretical_mass) * self.rtol, 1e-6)
+            x_min = self.theoretical_mass - pad
+            x_max = self.theoretical_mass + pad
+        y_max = max(y_max, self.theoretical_intensity, 0.0) * 1.1
+        if y_max <= 0:
+            y_max = 1.0
+        return x_min, x_max, y_max
+
+    def paintEvent(self, event) -> None:
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect(), self.palette().base())
+
+        metrics = painter.fontMetrics()
+        line_height = metrics.height()
+        rect = self.rect().adjusted(2, 2 * line_height + 4, -2, -14)
+        if rect.width() <= 0 or rect.height() <= 0:
+            return
+        x_min, x_max, y_max = self._ranges()
+        span = x_max - x_min
+
+        def x_pix(x):
+            return rect.left() + (x - x_min) / span * rect.width()
+
+        def y_pix(y):
+            return rect.bottom() - y / y_max * rect.height()
+
+        painter.setPen(_THEORY_COLOR)
+        painter.drawText(
+            QtCore.QPointF(2, metrics.ascent() + 1),
+            f"theo {format(self.theoretical_intensity, '.2e')}")
+        if self.peak is not None:
+            painter.setPen(_RAW_COLOR)
+            painter.drawText(
+                QtCore.QPointF(2, line_height + metrics.ascent() + 1),
+                f"actual {format(self.peak.peak_intensity, '.2e')}")
+
+        if self.peak is not None and len(self.peak.mz):
+            path = QtGui.QPainterPath()
+            path.moveTo(x_pix(float(self.peak.mz[0])),
+                        y_pix(float(self.peak.intensity[0])))
+            for mz, intensity in zip(self.peak.mz, self.peak.intensity):
+                path.lineTo(x_pix(float(mz)), y_pix(float(intensity)))
+            pen = QtGui.QPen(_RAW_COLOR)
+            pen.setWidthF(1.5)
+            painter.setPen(pen)
+            painter.drawPath(path)
+
+            text = format(self.peak.peak_position, '4f')
+            tx = x_pix(self.peak.peak_position) + 2
+            if tx + metrics.horizontalAdvance(text) > rect.right():
+                tx = x_pix(self.peak.peak_position) - \
+                    metrics.horizontalAdvance(text) - 2
+            painter.setPen(self.palette().text().color())
+            painter.drawText(QtCore.QPointF(tx, rect.bottom() - 1), text)
+
+        x = x_pix(self.theoretical_mass)
+        y = y_pix(self.theoretical_intensity)
+        pen = QtGui.QPen(_THEORY_COLOR)
+        pen.setWidthF(1.2)
+        pen.setStyle(QtCore.Qt.PenStyle.DashLine)
+        painter.setPen(pen)
+        painter.drawLine(QtCore.QPointF(x, rect.bottom()),
+                         QtCore.QPointF(x, y))
 
 
 class Window(QtWidgets.QMainWindow):
@@ -27,6 +130,14 @@ class Window(QtWidgets.QMainWindow):
     """
 
     acceptSignal = QtCore.Signal(list)
+
+    ISOTOPE_ROWS = (
+        "formula", "distribution", "mass", "tolerance(ppm)",
+        "theoretical ratio", "actual intensity", "actual ratio")
+    FORMULA_ROW, CHART_ROW, MASS_ROW, TOLERANCE_ROW, \
+        THEORETICAL_RATIO_ROW, ACTUAL_INTENSITY_ROW, ACTUAL_RATIO_ROW = range(7)
+    ISOTOPE_COLUMN_WIDTH = 150
+    CHART_ROW_HEIGHT = 160
 
     def __init__(self, manager: Manager, input: str, mass: float, formulas: List[Formula], *, owner=None, owner_row: Optional[int] = None) -> None:
         super().__init__()
@@ -49,8 +160,23 @@ class Window(QtWidgets.QMainWindow):
 
         ui.resultTableWidget.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        ui.isotopesTableWidget.horizontalHeader().setSectionResizeMode(
+        ui.horizontalLayout.setStretch(0, 0)
+        ui.horizontalLayout.setStretch(1, 1)
+
+        isotopes = ui.isotopesTableWidget
+        isotopes.setRowCount(len(self.ISOTOPE_ROWS))
+        isotopes.setVerticalHeaderLabels(self.ISOTOPE_ROWS)
+        header = isotopes.verticalHeader()
+        header.setDefaultAlignment(
+            QtCore.Qt.AlignmentFlag.AlignLeft
+            | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        header.setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(
+            self.CHART_ROW, QtWidgets.QHeaderView.ResizeMode.Fixed)
+        header.setFixedWidth(140)
+        isotopes.horizontalHeader().hide()
+        isotopes.setRowHeight(self.CHART_ROW, self.CHART_ROW_HEIGHT)
 
         if self.peak_bound:
             ui.lineEdit.setReadOnly(True)
@@ -62,7 +188,6 @@ class Window(QtWidgets.QMainWindow):
             ui.deleteToolButton.hide()
             ui.useSelectedToolButton.hide()
 
-        self.plot = Plot(ui.widget)
         ui.calcPushButton.clicked.connect(self.calc)
         ui.resultTableWidget.itemDoubleClicked.connect(self.plot_row)
         ui.resultTableWidget.itemSelectionChanged.connect(
@@ -73,7 +198,6 @@ class Window(QtWidgets.QMainWindow):
         ui.isotopesTableWidget.itemSelectionChanged.connect(
             self._update_edit_button)
         ui.editPeakPushButton.clicked.connect(self.edit_selected_peak)
-        ui.showAllToolButton.clicked.connect(self.showResult)
         ui.closeToolButton.clicked.connect(self.close)
         ui.useSelectedToolButton.clicked.connect(self.accept)
         ui.deleteToolButton.clicked.connect(self.delete_formula)
@@ -90,15 +214,6 @@ class Window(QtWidgets.QMainWindow):
 
     def find_peak_index(self, mass):
         return binary_search.indexNearest(self.peaks, mass, method=peak_position)
-
-    def matching_peak_index(self, mass):
-        if len(self.peaks) == 0:
-            return None
-        index = self.find_peak_index(mass)
-        peak = self.peaks[index]
-        if abs(mass) > 1e-6 and abs(peak.peak_position / mass - 1) < 3e-8:
-            return index
-        return None
 
     @property
     def peaks(self):
@@ -183,34 +298,25 @@ class Window(QtWidgets.QMainWindow):
             setText(3, format(formula.dbe(), '.1f'))
         table.resizeColumnsToContents()
 
-        isotopes_table = self.ui.isotopesTableWidget
-        isotopes_table.clearContents()
-        isotopes_table.setRowCount(0)
-
-        ax = self.plot.ax
-        ax.clear()
-
-        intensity = 1
-        if self.peak_bound:
-            if 0 <= self.owner_row < len(self.owner.peaks):
-                peak = self.owner.peaks[self.owner_row]
-                intensity = peak.peak_intensity
-                ax.plot(peak.mz, peak.intensity)
+        if formulas:
+            selected = 0
+            if mass:
+                selected = min(
+                    range(len(formulas)),
+                    key=lambda index: abs(formulas[index].mass() / mass - 1))
+            table.setCurrentCell(selected, 0)
+            table.selectRow(selected)
+            self.plot_formula(selected)
         else:
-            index = self.matching_peak_index(mass)
-            if index is not None:
-                peak = self.peaks[index]
-                intensity = peak.peak_intensity
-                ax.plot(peak.mz, peak.intensity)
+            self._clear_isotopes()
 
-        for f in self.formulas:
-            m = f.mass()
-            ax.plot([m, m], [0, intensity])
-            ax.annotate(str(f), [m, intensity])
-
-        self.plot.canvas.draw()
         self._update_result_buttons()
         self._update_edit_button()
+
+    def _clear_isotopes(self):
+        table = self.ui.isotopesTableWidget
+        table.clearContents()
+        table.setColumnCount(0)
 
     @ui_task
     async def plot_row(self, item: QtWidgets.QTableWidgetItem):
@@ -238,12 +344,13 @@ class Window(QtWidgets.QMainWindow):
 
         rtol = self.manager.workspace.info.formula_docker.calc_gen.rtol
 
-        mass = formula.mass()
+        origin_mass = formula.mass()
         if len(self.peaks) > 0:
-            peak_index = self.find_peak_index(mass)
+            peak_index = self.find_peak_index(origin_mass)
             peak = self.peaks[peak_index]
-            plot_peak = abs(peak.peak_position / mass - 1) < rtol
+            plot_peak = abs(peak.peak_position / origin_mass - 1) < rtol
         else:
+            peak = None
             plot_peak = False
 
         if plot_peak:
@@ -253,70 +360,86 @@ class Window(QtWidgets.QMainWindow):
 
         table = self.ui.isotopesTableWidget
         table.clearContents()
-        table.setRowCount(0)
-        table.setRowCount(len(isotopes))
+        table.setColumnCount(0)
+        table.setColumnCount(len(isotopes))
 
-        ax = self.plot.ax
-        ax.clear()
-
-        for row, (isotope, abundance) in enumerate(isotopes):  # include original formula
+        for column, (isotope, abundance) in enumerate(isotopes):
             isotope.charge = formula.charge
-            mass = isotope.mass()
+            isotope_mass = isotope.mass()
 
+            iso_peak = None
             if plot_peak:
-                peak_index = self.find_peak_index(mass)
-                iso_peak = self.peaks[peak_index]
-                if abs(iso_peak.peak_position / mass - 1) < rtol:
-                    plot_iso_peak = True
-                    ax.plot(iso_peak.mz, iso_peak.intensity)
-                    ax.annotate(format(iso_peak.peak_position, '4f'), [
-                                iso_peak.peak_position, 0])
-                else:
-                    plot_iso_peak = False
-            else:
-                plot_iso_peak = False
+                peak_index = self.find_peak_index(isotope_mass)
+                candidate = self.peaks[peak_index]
+                if abs(candidate.peak_position / isotope_mass - 1) < rtol:
+                    iso_peak = candidate
 
             iso_int = intensity * abundance
-            ax.plot([mass, mass], [0, iso_int])
-            ax.annotate(str(isotope), [mass, iso_int])
 
-            def setText(col, text):
-                table.setItem(row, col, QtWidgets.QTableWidgetItem(text))
-            setText(0, str(isotope))
-            setText(1, format(isotope.mass(), '.4f'))
-            setText(3, format(abundance / origin, '.4f'))
+            formula_item = QtWidgets.QTableWidgetItem(str(isotope))
+            font = formula_item.font()
+            font.setBold(True)
+            formula_item.setFont(font)
+            formula_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+            if iso_peak is not None:
+                formula_item.setData(
+                    QtCore.Qt.ItemDataRole.UserRole, iso_peak)
+            table.setItem(self.FORMULA_ROW, column, formula_item)
+            table.setItem(self.MASS_ROW, column, QtWidgets.QTableWidgetItem(
+                format(isotope_mass, '.4f')))
+            table.setItem(self.THEORETICAL_RATIO_ROW, column,
+                          QtWidgets.QTableWidgetItem(
+                              format(abundance / origin, '.4f')))
 
-            if not plot_iso_peak:
-                continue
-            table.item(row, 0).setData(
-                QtCore.Qt.ItemDataRole.UserRole, iso_peak)
-            setText(2, format((iso_peak.peak_position / mass - 1) * 1e6, '.2f'))
-            setText(4, format(iso_peak.peak_intensity, '.2e'))
-            setText(5, format(iso_peak.peak_intensity /
-                    peak.peak_intensity, '.4f'))
+            if iso_peak is not None:
+                table.setItem(
+                    self.TOLERANCE_ROW, column, QtWidgets.QTableWidgetItem(
+                        format((iso_peak.peak_position / isotope_mass - 1)
+                               * 1e6, '.2f')))
+                table.setItem(
+                    self.ACTUAL_INTENSITY_ROW, column,
+                    QtWidgets.QTableWidgetItem(
+                        format(iso_peak.peak_intensity, '.2e')))
+                table.setItem(
+                    self.ACTUAL_RATIO_ROW, column, QtWidgets.QTableWidgetItem(
+                        format(iso_peak.peak_intensity
+                               / peak.peak_intensity, '.4f')))
+            else:
+                for empty_row in (self.TOLERANCE_ROW,
+                                  self.ACTUAL_INTENSITY_ROW,
+                                  self.ACTUAL_RATIO_ROW):
+                    table.setItem(
+                        empty_row, column, QtWidgets.QTableWidgetItem(""))
 
-        self.plot.canvas.draw()
+            table.setItem(self.CHART_ROW, column,
+                          QtWidgets.QTableWidgetItem())
+            table.setCellWidget(
+                self.CHART_ROW, column,
+                IsotopePlot(iso_peak, isotope_mass, iso_int, rtol))
+            table.setColumnWidth(column, self.ISOTOPE_COLUMN_WIDTH)
+
+        table.setRowHeight(self.CHART_ROW, self.CHART_ROW_HEIGHT)
         self._update_edit_button()
 
     @ui_task
     async def edit_peak(self, item: QtWidgets.QTableWidgetItem):
-        self.edit_peak_row(item.row())
+        self.edit_peak_column(item.column())
 
     @ui_task
     async def edit_selected_peak(self):
-        row = self.ui.isotopesTableWidget.currentRow()
-        if row < 0:
+        column = self.ui.isotopesTableWidget.currentColumn()
+        if column < 0:
             return
-        logger.i(TAG, f"edit_selected_peak() row={row}")
-        self.edit_peak_row(row)
+        logger.i(TAG, f"edit_selected_peak() column={column}")
+        self.edit_peak_column(column)
 
-    def edit_peak_row(self, row: int):
+    def edit_peak_column(self, column: int):
         table = self.ui.isotopesTableWidget
-        item = table.item(row, 0)
+        item = table.item(self.FORMULA_ROW, column)
         if item is None:
             return
         formula = Formula(item.text())
-        it = table.item(row, 2)
+        it = table.item(self.TOLERANCE_ROW, column)
         if not (it and it.text()):
             return
 
@@ -339,7 +462,7 @@ class Window(QtWidgets.QMainWindow):
         window, local_index = targets[index]
         if window is not None:
             logger.i(
-                TAG, f"edit_peak_row() row={row} target=window:{window.original_index}:{local_index}")
+                TAG, f"edit_peak_column() column={column} target=window:{window.original_index}:{local_index}")
             window.peaks[local_index].formulas = [formula]
             window.showPeak(local_index)
             window.raise_()
@@ -347,7 +470,7 @@ class Window(QtWidgets.QMainWindow):
             window.activateWindow()
             return
 
-        logger.i(TAG, f"edit_peak_row() row={row} target=saved:{local_index}")
+        logger.i(TAG, f"edit_peak_column() column={column} target=saved:{local_index}")
         from Orbitool.UI import PeakFitFloatUiPy
         win = PeakFitFloatUiPy.Window.get_or_create(self.manager, local_index)
         win.set_formulas(local_index, [formula])
@@ -365,8 +488,9 @@ class Window(QtWidgets.QMainWindow):
 
     def _update_edit_button(self):
         table = self.ui.isotopesTableWidget
-        row = table.currentRow()
-        item = table.item(row, 2) if 0 <= row < table.rowCount() else None
+        column = table.currentColumn()
+        item = table.item(self.TOLERANCE_ROW, column) \
+            if 0 <= column < table.columnCount() else None
         self.ui.editPeakPushButton.setEnabled(bool(item and item.text()))
 
     @ui_task

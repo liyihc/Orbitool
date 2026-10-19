@@ -30,6 +30,13 @@ The relative m/z window in which two rows are considered the same mass;
 entered in ppm. Governs Add, Import, Merge and Compare alike.
 _Avoid_: precision, resolution
 
+## Formula
+
+**Isotope** (formula result):
+One isotope-composition entry in the isotope distribution table of a calculated
+formula (for example `C[13]H4`), as opposed to an element's isotope.
+_Avoid_: isotopologue, isotope species
+
 ## Peak Fit
 
 **Segment** (Peak Fit):

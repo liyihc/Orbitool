@@ -55,8 +55,8 @@ Double-click a Peak List row to open the window for its segment. The title is
 - Left: the segment's mz/intensity table, **peak num**, and **Re-fit**.
 - Right: the show toggles and plot, then the Peaks table with **Edit selected
   peak's formula** and a change summary, then **Close** / **Save**.
-- `formula` is the saved assignment. The `new formula` column appears only when
-  a formula actually changes, and shows the uncommitted edit. A peak-count
+- `formula` is the saved assignment. The `new formula*` column appears only
+  when a formula actually changes, and shows the uncommitted edit. A peak-count
   change alone does not reveal it.
 - Peak rows are selected as whole rows; Ctrl/Shift selects several. **Edit
   selected peak's formula** (or double-clicking a row) opens the formula result
@@ -70,12 +70,11 @@ Double-click a Peak List row to open the window for its segment. The title is
 
 Opened from a Peak Fit window, the window is bound to the selected peak: the
 title shows the m/z, the input is read-only, and **Calc** regenerates candidates
-after you change formula settings. Both tables select whole rows;
-**Show actual distribution of selected formula** (or double-clicking a result
-row) plots the isotope distribution. **Edit selected peak's formula** (or
-double-clicking an isotope row) writes that formula back to the matching peak,
-which may belong to another segment: the window matches against the whole Peak
-List, not just the open segment. **Delete formula** clears the peak's
+after you change formula settings. Its left/right layout and isotope table are
+described under [Calculate](formula.md#calculate). **Edit selected peak's
+formula** (or double-clicking an isotope column) writes that formula back to the
+matching peak, which may belong to another segment: the window matches against
+the whole Peak List, not just the open segment. **Delete formula** clears the peak's
 assignment; **Use selected formula** replaces it with the selected candidates;
 **Close** leaves it unchanged.
 

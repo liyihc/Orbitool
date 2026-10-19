@@ -55,14 +55,25 @@ You can input a **formula** or a **mass**:
 
 In the result window:
 
-- Rows are selected as whole rows. **Show actual distribution of selected
-  formula** (or double-clicking a row) plots that formula's natural isotope
-  distribution; **theoretical ratio** is the isotope abundance relative to the
-  origin formula.
-- **Edit selected peak's formula** (or double-clicking an isotope row) writes that
-  formula to the nearest peak in the whole Peak List; the matching peak may
+- Candidate formulas are on the left and selected as whole rows. **Show actual
+  distribution of selected formula** (or double-clicking a row) fills the
+  isotope table on the right. The nearest candidate is selected automatically
+  when the window opens or **Calc** runs.
+- The isotope table has one column per isotope. Rows are `formula` (the column
+  title), `distribution`, `mass`, `tolerance(ppm)`, **theoretical ratio**
+  (abundance relative to the origin formula), **actual intensity** and **actual
+  ratio**. The `distribution` row plots that isotope's raw peak, cropped to the
+  peak's own m/z span, and prints the theoretical and actual peak heights; the
+  isotope formula is in the `formula` row. Its vertical scale is set
+  independently to the taller of the raw peak and the theoretical height, so
+  compare raw and theoretical heights within one column, not between columns.
+- Isotopes with no peak within tolerance still get a column with their
+  `formula`, `mass`, **theoretical ratio** and a theoretical-only plot; the
+  `tolerance(ppm)`, **actual intensity** and **actual ratio** rows stay empty,
+  and that column cannot open a peak editor.
+- **Edit selected peak's formula** (or double-clicking an isotope column) writes
+  that formula to the nearest peak in the whole Peak List; the matching peak may
   belong to another segment.
-- **show all** redraws every candidate formula on the plot.
 - Opened from the [Peak Fit window](peak-fit.md#formula-result-window), the
   window is bound to one peak: its m/z is in the title, the input is read-only,
   and **Calc** recalculates candidates after formula-setting changes.

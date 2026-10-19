@@ -137,7 +137,7 @@ def test_peak_fit_window_title_columns_and_summary(env):
         assert table.selectionMode() == \
             QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection
         assert table.horizontalHeaderItem(1).text() == "formula"
-        assert table.horizontalHeaderItem(2).text() == "new formula"
+        assert table.horizontalHeaderItem(2).text() == "new formula*"
         assert table.isColumnHidden(2)
         assert win.ui.summaryLabel.text() == "No unsaved changes"
         assert not win.ui.savePushButton.isEnabled()
@@ -235,8 +235,14 @@ def test_formula_result_peak_bound_and_global_modes(env):
             QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection
         assert bound.ui.isotopesTableWidget.selectionMode() == \
             QtWidgets.QAbstractItemView.SelectionMode.SingleSelection
-        assert bound.ui.isotopesTableWidget.horizontalHeaderItem(3).text() \
+        assert bound.ui.isotopesTableWidget.selectionBehavior() == \
+            QtWidgets.QAbstractItemView.SelectionBehavior.SelectColumns
+        assert bound.ui.isotopesTableWidget.verticalHeaderItem(4).text() \
             == "theoretical ratio"
+        # the first candidate is selected on open, so its distribution is shown
+        assert bound.ui.showDistributionPushButton.isEnabled()
+
+        bound.ui.resultTableWidget.setCurrentIndex(QtCore.QModelIndex())
         assert not bound.ui.showDistributionPushButton.isEnabled()
 
         bound.ui.resultTableWidget.setCurrentCell(0, 0)
@@ -262,10 +268,12 @@ def test_formula_result_finds_isotopes_across_segments(env):
     try:
         bound.plot_formula(0)
         table = bound.ui.isotopesTableWidget
-        assert table.rowCount() > 1
-        assert table.item(1, 2) is not None
-        assert table.item(1, 2).text() != ""
-        assert table.item(1, 0).data(QtCore.Qt.ItemDataRole.UserRole) is not None
+        assert table.columnCount() > 1
+        assert table.item(bound.TOLERANCE_ROW, 1) is not None
+        assert table.item(bound.TOLERANCE_ROW, 1).text() != ""
+        assert table.item(bound.FORMULA_ROW, 1).data(
+            QtCore.Qt.ItemDataRole.UserRole) is not None
+        assert table.cellWidget(bound.CHART_ROW, 1) is not None
     finally:
         bound.close()
         peak_fit.close()
@@ -329,12 +337,13 @@ def test_bound_edit_targets_open_segment_pending_peaks(env):
         bound.plot_formula(0)
         table = bound.ui.isotopesTableWidget
         target_mass = target.peaks[0].peak_position
-        row = next(
-            row for row in range(table.rowCount())
-            if table.item(row, 2) is not None
-            and abs(Formula(table.item(row, 0).text()).mass()
+        column = next(
+            column for column in range(table.columnCount())
+            if table.item(bound.TOLERANCE_ROW, column) is not None
+            and table.item(bound.TOLERANCE_ROW, column).text()
+            and abs(Formula(table.item(bound.FORMULA_ROW, column).text()).mass()
                     / target_mass - 1) < 1e-6)
-        bound.edit_peak_row(row)
+        bound.edit_peak_column(column)
 
         assert [str(f) for f in target.peaks[0].formulas] \
             == [str(target_formula)]
