@@ -24,7 +24,7 @@ class Window(QtWidgets.QMainWindow):
         ui.setupUi(self)
 
         manager = self.manager
-        self.setWindowTitle(f"Orbitool {manager.workspace.info.version}")
+        self.setWindowTitle(f"Orbitool {VERSION}")
 
         dock_opt = self.DockOption
 
@@ -189,16 +189,16 @@ class Window(QtWidgets.QMainWindow):
         version = updater.get_version(f)
         if updater.too_new(version):
             UiUtils.showInfo(
-                f"This workspace was created with a newer version of Orbitool"
-                f" ({version}) than this build ({VERSION}).\n"
+                f"This workspace uses a newer format ({version}) than this"
+                f" build supports.\n"
                 "Please update Orbitool to open it.",
                 "workspace too new")
             return
         if updater.need_update(version):
             if not UiUtils.confirm(
-                    f"This workspace was created with Orbitool {version}.\n"
-                    f"To open it here it must be upgraded to {VERSION} and "
-                    "saved as a new file.\n"
+                    f"This workspace uses an older format ({version}).\n"
+                    "To open it here it must be upgraded and saved as a new"
+                    " file.\n"
                     "Your original file will not be changed.",
                     "workspace from an older version",
                     accept="Upgrade and Save…", reject="Cancel"):

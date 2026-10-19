@@ -4,8 +4,8 @@ from typing import Dict, Generic, List, Optional, Type, TypeVar, Union
 
 from Orbitool.base import BaseDiskData, BaseStructure, DiskList, H5File
 from Orbitool.base.structure import broken_entries
+from pydantic import Field
 
-from ...version import VERSION
 from ..spectrum import Spectrum
 from ..timeseries import TimeSeries
 from .base import BaseInfo
@@ -18,12 +18,14 @@ from .peak_fit import PeakFitInfo
 from .peak_shape import PeakShapeInfo
 from .spectra_list import SpectraListInfo
 from .timeseries import TimeseriesInfo
+from .updater.base import workspace_version
 
 T = TypeVar("T")
 
 
 class WorkspaceInfo(BaseStructure):
-    version: str = VERSION
+    # The file's format version, not the app version (see `version.py`).
+    version: str = Field(default_factory=workspace_version)
     file_tab: FileTabInfo = FileTabInfo()
     noise_tab: NoiseTabInfo = NoiseTabInfo()
     peak_shape_tab: PeakShapeInfo = PeakShapeInfo()

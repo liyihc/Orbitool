@@ -249,6 +249,22 @@ def test_migration_carries_the_legacy_period_end_column(tmp_path):
     assert broken_entries == []
 
 
+def test_new_workspace_is_stamped_with_the_format_version(tmp_path):
+    # the app version moves independently: a file saved by this build must carry
+    # the newest format version, or the same build would call it too new
+    path = tmp_path / "new.Orbitool"
+    workspace = _open(path)
+    try:
+        workspace.save()
+    finally:
+        workspace.close()
+
+    stamped = updater.get_version(str(path))
+    assert stamped == updater.workspace_version()
+    assert not updater.too_new(stamped)
+    assert not updater.need_update(stamped)
+
+
 def test_migration_accepts_a_tab_that_never_held_series(tmp_path):
     # a tab the 2.4.0 renamer created for a workspace predating the
     # time-series feature: no attributes, no series -- nothing to migrate

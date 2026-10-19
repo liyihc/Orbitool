@@ -29,6 +29,15 @@ def need_update(version: str):
     return version < start_versions[-1][0]
 
 
+def workspace_version() -> str:
+    """The newest workspace format version this build can read and write.
+
+    This is independent of the application version: it only moves when a new
+    updater is registered because the HDF5 layout changed.
+    """
+    return str(start_versions[-1][0])
+
+
 def too_new(version: str):
     version = Version(version)
     return version > start_versions[-1][0]

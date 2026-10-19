@@ -1,4 +1,5 @@
-from .workspace import WorkSpace, VERSION
+from .workspace import WorkSpace
+from ...version import VERSION
 from . import noise_tab, spectra_list, base
 from .base import UiNameGetter, UiState
 from .ui_state_handlers import init_handlers
